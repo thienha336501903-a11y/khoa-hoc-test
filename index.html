@@ -172,7 +172,7 @@ body{
 
 <script>
 const COURSE = new URLSearchParams(window.location.search).get("course") || "banh-mi";
-let idToken = "";
+let idToken = localStorage.getItem("course_credential") || "";
 let currentLessons = [];
 
 function scrollToLessons(){
@@ -291,6 +291,9 @@ async function loadCourseData(credential){
       <div class="text-right text-sm">
         <p class="font-black text-[#2f5f23]">Đã đăng nhập</p>
         <p class="text-black/55">${data.email}</p>
+        <button onclick="logoutGoogle()" class="mt-2 text-red-600 font-bold text-xs">
+          Đăng xuất
+        </button>
       </div>
     `;
 
@@ -320,6 +323,12 @@ async function initGoogle(){
       client_id: config.googleClientId,
       callback: (response) => {
         idToken = response.credential;
+
+        localStorage.setItem(
+          "course_credential",
+          response.credential
+        );
+
         loadCourseData(response.credential);
       }
     });
@@ -328,11 +337,20 @@ async function initGoogle(){
       document.getElementById("googleBtn"),
       { theme:"outline", size:"large", text:"signin_with", shape:"pill" }
     );
+
+    if(idToken){
+      loadCourseData(idToken);
+    }
   }catch(err){
     document.getElementById("statusBox").innerHTML = `
       <p class="font-black text-xl text-[#b65c4b]">Chưa cấu hình GOOGLE_CLIENT_ID.</p>
     `;
   }
+}
+
+function logoutGoogle(){
+  localStorage.removeItem("course_credential");
+  location.reload();
 }
 
 window.onload = initGoogle;
