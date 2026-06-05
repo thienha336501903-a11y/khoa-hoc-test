@@ -123,6 +123,7 @@ async function getEmailFromGoogleCredential(credential) {
 async function getEmailFromRequest({ credential, sessionToken }) {
   if (sessionToken) {
     const session = verifySessionToken(sessionToken);
+
     if (session && session.email) {
       return {
         email: session.email,
@@ -134,6 +135,7 @@ async function getEmailFromRequest({ credential, sessionToken }) {
 
   if (credential) {
     const email = await getEmailFromGoogleCredential(credential);
+
     if (email) {
       return {
         email,
