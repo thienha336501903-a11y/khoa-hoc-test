@@ -175,8 +175,47 @@ const COURSE = new URLSearchParams(window.location.search).get("course") || "ban
 const SESSION_KEY = `course_session_token_${COURSE}`;
 const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
 const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
+const SESSION_COOKIE = "course_session_token";
 
 let currentLessons = [];
+
+function setSessionCookie(token, expiresAt){
+  if(!token) return;
+
+  let cookie = `${SESSION_COOKIE}=${encodeURIComponent(token)}; path=/; samesite=lax`;
+
+  if(expiresAt){
+    cookie += `; expires=${new Date(Number(expiresAt)).toUTCString()}`;
+  }
+
+  if(location.protocol === "https:"){
+    cookie += "; secure";
+  }
+
+  document.cookie = cookie;
+}
+
+function getSessionCookie(){
+  const cookies = document.cookie ? document.cookie.split(";") : [];
+
+  for(const cookie of cookies){
+    const index = cookie.indexOf("=");
+    if(index === -1) continue;
+
+    const key = cookie.slice(0, index).trim();
+    const value = cookie.slice(index + 1).trim();
+
+    if(key === SESSION_COOKIE){
+      return decodeURIComponent(value);
+    }
+  }
+
+  return null;
+}
+
+function clearSessionCookie(){
+  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; samesite=lax`;
+}
 
 function scrollToLessons(){
   document.getElementById("lessons").scrollIntoView({behavior:"smooth"});
@@ -235,6 +274,8 @@ function clearSession(){
   }catch(err){
     console.warn("Cannot clear login session:", err);
   }
+
+  clearSessionCookie();
 }
 
 function saveSession(data){
@@ -253,6 +294,10 @@ function saveSession(data){
   }catch(err){
     console.warn("Cannot save login session:", err);
   }
+
+  if(data && data.sessionToken){
+    setSessionCookie(data.sessionToken, data.sessionExpiresAt);
+  }
 }
 
 function getSavedSession(){
@@ -264,10 +309,12 @@ function getSavedSession(){
     exp = Number(localStorage.getItem(SESSION_EXP_KEY) || 0);
   }catch(err){
     console.warn("Cannot read login session:", err);
-    return null;
+    return getSessionCookie();
   }
 
-  if(!token) return null;
+  if(!token){
+    return getSessionCookie();
+  }
 
   if(exp && Date.now() > exp){
     clearSession();
@@ -386,16 +433,24 @@ async function loadCourseData(authPayload){
     const data = await res.json();
 
     if(!res.ok || !data.allowed){
-      clearSession();
+      if(res.status === 401 || res.status === 403){
+        clearSession();
+
+        statusBox.innerHTML = `
+          <p class="font-black text-xl text-[#b65c4b]">Gmail nay chua duoc cap quyen hoc.</p>
+          <p class="mt-2 text-black/60">Vui long dang nhap dung Gmail da mua khoa hoc, hoac lien he admin de duoc cap quyen.</p>
+        `;
+
+        document.getElementById("lessonList").classList.add("hidden");
+        showLoginButton();
+        renderGoogleButton();
+        return;
+      }
 
       statusBox.innerHTML = `
-        <p class="font-black text-xl text-[#b65c4b]">Gmail này chưa được cấp quyền học.</p>
-        <p class="mt-2 text-black/60">Vui lòng đăng nhập đúng Gmail đã mua khóa học, hoặc liên hệ admin để được cấp quyền.</p>
+        <p class="font-black text-xl text-[#b65c4b]">Khong ket noi duoc he thong.</p>
+        <p class="mt-2 text-black/60">Vui long tai lai trang sau it phut. Phien dang nhap van duoc giu neu chua het han.</p>
       `;
-
-      document.getElementById("lessonList").classList.add("hidden");
-      showLoginButton();
-      renderGoogleButton();
       return;
     }
 
