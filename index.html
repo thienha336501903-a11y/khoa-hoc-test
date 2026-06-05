@@ -426,6 +426,7 @@ async function loadCourseData(authPayload){
 
     const res = await fetch("/api/course-data", {
       method:"POST",
+      credentials:"same-origin",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify(body)
     });
