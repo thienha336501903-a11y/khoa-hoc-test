@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 
 <style>
 :root{
@@ -187,7 +187,6 @@ function getVideoUrl(url){
 
   const text = String(url).trim();
 
-  // Bunny Stream / Bunny embed / YouTube / Vimeo / iframe links giữ nguyên
   if(
     text.includes("iframe.mediadelivery.net") ||
     text.includes("bunnycdn.com") ||
@@ -198,7 +197,6 @@ function getVideoUrl(url){
     return text;
   }
 
-  // Google Drive link tự đổi sang preview
   if(text.includes("/preview")) return text;
 
   let match = text.match(/\/file\/d\/([^/]+)/);
@@ -276,9 +274,12 @@ function showLoggedIn(email){
 }
 
 function showLoginButton(){
-  const googleBtn = document.getElementById("googleBtn");
-  if(!googleBtn) return;
-  googleBtn.classList.remove("hidden");
+  const area = document.getElementById("loginArea");
+  if(!area) return;
+
+  if(!document.getElementById("googleBtn")){
+    area.innerHTML = `<div id="googleBtn"></div>`;
+  }
 }
 
 function renderLessons(lessons){
@@ -381,6 +382,8 @@ async function loadCourseData(authPayload){
     renderLessons(currentLessons);
 
   }catch(err){
+    console.error("Không tải được dữ liệu khóa học:", err);
+
     statusBox.innerHTML = `
       <p class="font-black text-xl text-[#b65c4b]">Không kết nối được hệ thống.</p>
       <p class="mt-2 text-black/60">Kiểm tra lại API, Google Sheet ID và Environment Variables trên Vercel.</p>
@@ -388,10 +391,44 @@ async function loadCourseData(authPayload){
   }
 }
 
+async function waitForGoogleLibrary(){
+  if(typeof google !== "undefined" && google.accounts && google.accounts.id){
+    return;
+  }
+
+  await new Promise((resolve, reject) => {
+    let count = 0;
+
+    const interval = setInterval(() => {
+      count++;
+
+      if(typeof google !== "undefined" && google.accounts && google.accounts.id){
+        clearInterval(interval);
+        resolve();
+      }
+
+      if(count > 80){
+        clearInterval(interval);
+        reject(new Error("Google Sign-In library chưa tải xong"));
+      }
+    }, 100);
+  });
+}
+
 async function initGoogle(){
+  const savedSession = getSavedSession();
+
+  if(savedSession){
+    loadCourseData({
+      sessionToken: savedSession
+    });
+  }
+
   try{
     const res = await fetch("/api/public-config");
     const config = await res.json();
+
+    await waitForGoogleLibrary();
 
     google.accounts.id.initialize({
       client_id: config.googleClientId,
@@ -402,23 +439,21 @@ async function initGoogle(){
       }
     });
 
+    showLoginButton();
+
     google.accounts.id.renderButton(
       document.getElementById("googleBtn"),
       { theme:"outline", size:"large", text:"signin_with", shape:"pill" }
     );
 
-    const savedSession = getSavedSession();
-
-    if(savedSession){
-      loadCourseData({
-        sessionToken: savedSession
-      });
-    }
-
   }catch(err){
-    document.getElementById("statusBox").innerHTML = `
-      <p class="font-black text-xl text-[#b65c4b]">Chưa cấu hình GOOGLE_CLIENT_ID.</p>
-    `;
+    console.error("Lỗi khởi tạo Google Login:", err);
+
+    if(!getSavedSession()){
+      document.getElementById("statusBox").innerHTML = `
+        <p class="font-black text-xl text-[#b65c4b]">Chưa cấu hình GOOGLE_CLIENT_ID hoặc lỗi tải Google Login.</p>
+      `;
+    }
   }
 }
 
