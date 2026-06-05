@@ -3,6 +3,7 @@ import { OAuth2Client } from "google-auth-library";
 import crypto from "crypto";
 
 const SESSION_DAYS = Number(process.env.SESSION_DAYS || 30);
+const SESSION_COOKIE = "course_session_token";
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -50,6 +51,42 @@ function createSessionToken(email) {
     sessionToken: `${payloadBase64}.${signature}`,
     sessionExpiresAt: expiresAt
   };
+}
+
+function cookieOptions(maxAgeMs) {
+  const parts = [
+    "Path=/",
+    "SameSite=Lax",
+    `Max-Age=${Math.floor(maxAgeMs / 1000)}`
+  ];
+
+  if (process.env.NODE_ENV === "production") {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
+}
+
+function parseCookies(req) {
+  const header = req.headers?.cookie || "";
+
+  return header.split(";").reduce((cookies, part) => {
+    const index = part.indexOf("=");
+    if (index === -1) return cookies;
+
+    const key = part.slice(0, index).trim();
+    const value = part.slice(index + 1).trim();
+
+    if (key) {
+      try {
+        cookies[key] = decodeURIComponent(value);
+      } catch (e) {
+        cookies[key] = value;
+      }
+    }
+
+    return cookies;
+  }, {});
 }
 
 function verifySessionToken(token) {
@@ -154,8 +191,12 @@ export default async function handler(req, res) {
 
     const { credential, sessionToken, course } = req.body || {};
     const courseSlug = String(course || "banh-mi").trim();
+    const cookies = parseCookies(req);
 
-    const authInfo = await getEmailFromRequest({ credential, sessionToken });
+    const authInfo = await getEmailFromRequest({
+      credential,
+      sessionToken: sessionToken || cookies[SESSION_COOKIE]
+    });
 
     if (!authInfo || !authInfo.email) {
       return res.status(401).json({
@@ -227,6 +268,10 @@ export default async function handler(req, res) {
     }
 
     const session = createSessionToken(email);
+    res.setHeader(
+      "Set-Cookie",
+      `${SESSION_COOKIE}=${encodeURIComponent(session.sessionToken)}; ${cookieOptions(session.sessionExpiresAt - Date.now())}`
+    );
 
     return res.status(200).json({
       allowed: true,
