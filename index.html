@@ -172,16 +172,33 @@ body{
 
 <script>
 const COURSE = new URLSearchParams(window.location.search).get("course") || "banh-mi";
-let idToken = localStorage.getItem("course_credential") || "";
+const SESSION_KEY = `course_session_token_${COURSE}`;
+const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
+const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
+
 let currentLessons = [];
 
 function scrollToLessons(){
   document.getElementById("lessons").scrollIntoView({behavior:"smooth"});
 }
 
-function drivePreviewUrl(url){
+function getVideoUrl(url){
   if(!url) return "";
+
   const text = String(url).trim();
+
+  // Bunny Stream / Bunny embed / YouTube / Vimeo / iframe links giữ nguyên
+  if(
+    text.includes("iframe.mediadelivery.net") ||
+    text.includes("bunnycdn.com") ||
+    text.includes("youtube.com") ||
+    text.includes("youtu.be") ||
+    text.includes("vimeo.com")
+  ){
+    return text;
+  }
+
+  // Google Drive link tự đổi sang preview
   if(text.includes("/preview")) return text;
 
   let match = text.match(/\/file\/d\/([^/]+)/);
@@ -194,7 +211,9 @@ function drivePreviewUrl(url){
 }
 
 function openVideo(title, url){
-  const preview = drivePreviewUrl(url);
+  const preview = getVideoUrl(url);
+  if(!preview) return alert("Bài này chưa có video.");
+
   document.getElementById("modalTitle").innerText = title || "Video bài học";
   document.getElementById("videoFrame").src = preview;
   document.getElementById("videoModal").classList.add("show");
@@ -208,6 +227,58 @@ function closeVideo(){
 function openRecipe(url){
   if(!url) return alert("Bài này chưa có công thức.");
   window.open(url, "_blank");
+}
+
+function clearSession(){
+  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_EMAIL_KEY);
+  localStorage.removeItem(SESSION_EXP_KEY);
+}
+
+function saveSession(data){
+  if(data && data.sessionToken){
+    localStorage.setItem(SESSION_KEY, data.sessionToken);
+  }
+
+  if(data && data.email){
+    localStorage.setItem(SESSION_EMAIL_KEY, data.email);
+  }
+
+  if(data && data.sessionExpiresAt){
+    localStorage.setItem(SESSION_EXP_KEY, String(data.sessionExpiresAt));
+  }
+}
+
+function getSavedSession(){
+  const token = localStorage.getItem(SESSION_KEY);
+  const exp = Number(localStorage.getItem(SESSION_EXP_KEY) || 0);
+
+  if(!token) return null;
+
+  if(exp && Date.now() > exp){
+    clearSession();
+    return null;
+  }
+
+  return token;
+}
+
+function showLoggedIn(email){
+  document.getElementById("loginArea").innerHTML = `
+    <div class="text-right text-sm">
+      <p class="font-black text-[#2f5f23]">Đã đăng nhập</p>
+      <p class="text-black/55">${email || ""}</p>
+      <button onclick="logoutGoogle()" class="mt-2 text-red-600 font-bold text-xs">
+        Đăng xuất
+      </button>
+    </div>
+  `;
+}
+
+function showLoginButton(){
+  const googleBtn = document.getElementById("googleBtn");
+  if(!googleBtn) return;
+  googleBtn.classList.remove("hidden");
 }
 
 function renderLessons(lessons){
@@ -265,37 +336,40 @@ function renderLessons(lessons){
   list.classList.remove("hidden");
 }
 
-async function loadCourseData(credential){
+async function loadCourseData(authPayload){
   const statusBox = document.getElementById("statusBox");
   statusBox.classList.remove("hidden");
   statusBox.innerHTML = `<p class="font-black text-xl">Đang kiểm tra quyền học...</p>`;
 
   try{
+    const body = {
+      course: COURSE,
+      ...authPayload
+    };
+
     const res = await fetch("/api/course-data", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ credential, course: COURSE })
+      body: JSON.stringify(body)
     });
 
     const data = await res.json();
 
     if(!res.ok || !data.allowed){
+      clearSession();
+
       statusBox.innerHTML = `
         <p class="font-black text-xl text-[#b65c4b]">Gmail này chưa được cấp quyền học.</p>
         <p class="mt-2 text-black/60">Vui lòng đăng nhập đúng Gmail đã mua khóa học, hoặc liên hệ admin để được cấp quyền.</p>
       `;
+
+      document.getElementById("lessonList").classList.add("hidden");
+      showLoginButton();
       return;
     }
 
-    document.getElementById("loginArea").innerHTML = `
-      <div class="text-right text-sm">
-        <p class="font-black text-[#2f5f23]">Đã đăng nhập</p>
-        <p class="text-black/55">${data.email}</p>
-        <button onclick="logoutGoogle()" class="mt-2 text-red-600 font-bold text-xs">
-          Đăng xuất
-        </button>
-      </div>
-    `;
+    saveSession(data);
+    showLoggedIn(data.email);
 
     if(data.courseInfo){
       if(data.courseInfo.title) document.getElementById("courseTitle").innerHTML = data.courseInfo.title;
@@ -322,14 +396,9 @@ async function initGoogle(){
     google.accounts.id.initialize({
       client_id: config.googleClientId,
       callback: (response) => {
-        idToken = response.credential;
-
-        localStorage.setItem(
-          "course_credential",
-          response.credential
-        );
-
-        loadCourseData(response.credential);
+        loadCourseData({
+          credential: response.credential
+        });
       }
     });
 
@@ -338,9 +407,14 @@ async function initGoogle(){
       { theme:"outline", size:"large", text:"signin_with", shape:"pill" }
     );
 
-    if(idToken){
-      loadCourseData(idToken);
+    const savedSession = getSavedSession();
+
+    if(savedSession){
+      loadCourseData({
+        sessionToken: savedSession
+      });
     }
+
   }catch(err){
     document.getElementById("statusBox").innerHTML = `
       <p class="font-black text-xl text-[#b65c4b]">Chưa cấu hình GOOGLE_CLIENT_ID.</p>
@@ -349,7 +423,7 @@ async function initGoogle(){
 }
 
 function logoutGoogle(){
-  localStorage.removeItem("course_credential");
+  clearSession();
   location.reload();
 }
 
