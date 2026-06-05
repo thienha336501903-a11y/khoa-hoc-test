@@ -23,7 +23,6 @@ function base64url(input) {
 function sessionSecret() {
   return (
     process.env.SESSION_SECRET ||
-    process.env.GOOGLE_PRIVATE_KEY ||
     process.env.GOOGLE_CLIENT_ID ||
     "fallback-session-secret"
   );
