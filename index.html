@@ -337,6 +337,19 @@ function renderLessons(lessons){
   list.classList.remove("hidden");
 }
 
+function renderGoogleButton(){
+  const btn = document.getElementById("googleBtn");
+  if(!btn) return;
+
+  if(typeof google !== "undefined" && google.accounts && google.accounts.id){
+    btn.innerHTML = "";
+    google.accounts.id.renderButton(
+      btn,
+      { theme:"outline", size:"large", text:"signin_with", shape:"pill" }
+    );
+  }
+}
+
 async function loadCourseData(authPayload){
   const statusBox = document.getElementById("statusBox");
   statusBox.classList.remove("hidden");
@@ -366,6 +379,7 @@ async function loadCourseData(authPayload){
 
       document.getElementById("lessonList").classList.add("hidden");
       showLoginButton();
+      renderGoogleButton();
       return;
     }
 
@@ -416,17 +430,11 @@ async function waitForGoogleLibrary(){
 }
 
 async function initGoogle(){
-  const savedSession = getSavedSession();
-
-  if(savedSession){
-    loadCourseData({
-      sessionToken: savedSession
-    });
-  }
+  let config = { googleClientId: "" };
 
   try{
     const res = await fetch("/api/public-config");
-    const config = await res.json();
+    config = await res.json();
 
     await waitForGoogleLibrary();
 
@@ -438,18 +446,24 @@ async function initGoogle(){
         });
       }
     });
+  }catch(err){
+    console.error("Lỗi cấu hình Google Sign-In:", err);
+  }
 
+  const savedSession = getSavedSession();
+
+  if(savedSession){
+    await loadCourseData({
+      sessionToken: savedSession
+    });
+  }
+
+  if(!getSavedSession()){
     showLoginButton();
 
-    google.accounts.id.renderButton(
-      document.getElementById("googleBtn"),
-      { theme:"outline", size:"large", text:"signin_with", shape:"pill" }
-    );
-
-  }catch(err){
-    console.error("Lỗi khởi tạo Google Login:", err);
-
-    if(!getSavedSession()){
+    if(config.googleClientId && typeof google !== "undefined" && google.accounts && google.accounts.id){
+      renderGoogleButton();
+    }else{
       document.getElementById("statusBox").innerHTML = `
         <p class="font-black text-xl text-[#b65c4b]">Chưa cấu hình GOOGLE_CLIENT_ID hoặc lỗi tải Google Login.</p>
       `;
