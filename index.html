@@ -228,28 +228,44 @@ function openRecipe(url){
 }
 
 function clearSession(){
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem(SESSION_EMAIL_KEY);
-  localStorage.removeItem(SESSION_EXP_KEY);
+  try{
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_EMAIL_KEY);
+    localStorage.removeItem(SESSION_EXP_KEY);
+  }catch(err){
+    console.warn("Cannot clear login session:", err);
+  }
 }
 
 function saveSession(data){
-  if(data && data.sessionToken){
-    localStorage.setItem(SESSION_KEY, data.sessionToken);
-  }
+  try{
+    if(data && data.sessionToken){
+      localStorage.setItem(SESSION_KEY, data.sessionToken);
+    }
 
-  if(data && data.email){
-    localStorage.setItem(SESSION_EMAIL_KEY, data.email);
-  }
+    if(data && data.email){
+      localStorage.setItem(SESSION_EMAIL_KEY, data.email);
+    }
 
-  if(data && data.sessionExpiresAt){
-    localStorage.setItem(SESSION_EXP_KEY, String(data.sessionExpiresAt));
+    if(data && data.sessionExpiresAt){
+      localStorage.setItem(SESSION_EXP_KEY, String(data.sessionExpiresAt));
+    }
+  }catch(err){
+    console.warn("Cannot save login session:", err);
   }
 }
 
 function getSavedSession(){
-  const token = localStorage.getItem(SESSION_KEY);
-  const exp = Number(localStorage.getItem(SESSION_EXP_KEY) || 0);
+  let token = null;
+  let exp = 0;
+
+  try{
+    token = localStorage.getItem(SESSION_KEY);
+    exp = Number(localStorage.getItem(SESSION_EXP_KEY) || 0);
+  }catch(err){
+    console.warn("Cannot read login session:", err);
+    return null;
+  }
 
   if(!token) return null;
 
@@ -429,13 +445,21 @@ async function waitForGoogleLibrary(){
   });
 }
 
-async function initGoogle(){
-  let config = { googleClientId: "" };
-
+async function getPublicConfig(){
   try{
     const res = await fetch("/api/public-config");
-    config = await res.json();
+    if(!res.ok) return { googleClientId: "" };
+    return await res.json();
+  }catch(err){
+    console.error("Cannot load Google Sign-In config:", err);
+    return { googleClientId: "" };
+  }
+}
 
+async function setupGoogleSignIn(config){
+  if(!config.googleClientId) return false;
+
+  try{
     await waitForGoogleLibrary();
 
     google.accounts.id.initialize({
@@ -446,22 +470,35 @@ async function initGoogle(){
         });
       }
     });
-  }catch(err){
-    console.error("Lỗi cấu hình Google Sign-In:", err);
-  }
 
+    return true;
+  }catch(err){
+    console.error("Cannot initialize Google Sign-In:", err);
+    return false;
+  }
+}
+
+async function initGoogle(){
   const savedSession = getSavedSession();
+  const configPromise = getPublicConfig();
 
   if(savedSession){
     await loadCourseData({
       sessionToken: savedSession
     });
+
+    if(getSavedSession()){
+      return;
+    }
   }
+
+  const config = await configPromise;
+  const googleReady = await setupGoogleSignIn(config);
 
   if(!getSavedSession()){
     showLoginButton();
 
-    if(config.googleClientId && typeof google !== "undefined" && google.accounts && google.accounts.id){
+    if(googleReady){
       renderGoogleButton();
     }else{
       document.getElementById("statusBox").innerHTML = `
