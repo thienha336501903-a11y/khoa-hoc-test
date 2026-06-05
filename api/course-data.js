@@ -26,12 +26,23 @@ function sessionSecret() {
     process.env.SESSION_SECRET ||
     process.env.GOOGLE_CLIENT_ID ||
     "fallback-session-secret"
-  );
+  ).trim();
 }
 
-function signPayload(payloadBase64) {
+function sessionSecrets() {
+  return [
+    process.env.SESSION_SECRET,
+    process.env.GOOGLE_CLIENT_ID,
+    "fallback-session-secret"
+  ]
+    .filter(Boolean)
+    .map(secret => String(secret).trim())
+    .filter((secret, index, secrets) => secret && secrets.indexOf(secret) === index);
+}
+
+function signPayload(payloadBase64, secret = sessionSecret()) {
   return crypto
-    .createHmac("sha256", sessionSecret())
+    .createHmac("sha256", secret)
     .update(payloadBase64)
     .digest("base64url");
 }
@@ -90,34 +101,48 @@ function parseCookies(req) {
 }
 
 function verifySessionToken(token) {
-  if (!token || typeof token !== "string") return null;
+  if (!token || typeof token !== "string") {
+    return { valid: false, reason: "missing_session_token" };
+  }
 
   const parts = token.split(".");
-  if (parts.length !== 2) return null;
+  if (parts.length !== 2) {
+    return { valid: false, reason: "bad_session_format" };
+  }
 
   const [payloadBase64, signature] = parts;
-  const expectedSignature = signPayload(payloadBase64);
+  const validSignature = sessionSecrets().some(secret => {
+    const expectedSignature = signPayload(payloadBase64, secret);
+    const a = Buffer.from(signature);
+    const b = Buffer.from(expectedSignature);
 
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expectedSignature);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  });
 
-  if (a.length !== b.length) return null;
-  if (!crypto.timingSafeEqual(a, b)) return null;
+  if (!validSignature) {
+    return { valid: false, reason: "bad_session_signature" };
+  }
 
   try {
     const payload = JSON.parse(
       Buffer.from(payloadBase64, "base64url").toString("utf8")
     );
 
-    if (!payload.email || !payload.exp) return null;
-    if (Date.now() > Number(payload.exp)) return null;
+    if (!payload.email || !payload.exp) {
+      return { valid: false, reason: "bad_session_payload" };
+    }
+
+    if (Date.now() > Number(payload.exp)) {
+      return { valid: false, reason: "expired_session" };
+    }
 
     return {
+      valid: true,
       email: normalizeEmail(payload.email),
       sessionExpiresAt: Number(payload.exp)
     };
   } catch (e) {
-    return null;
+    return { valid: false, reason: "unreadable_session_payload" };
   }
 }
 
@@ -160,13 +185,18 @@ async function getEmailFromRequest({ credential, sessionToken }) {
   if (sessionToken) {
     const session = verifySessionToken(sessionToken);
 
-    if (session && session.email) {
+    if (session.valid && session.email) {
       return {
         email: session.email,
         sessionExpiresAt: session.sessionExpiresAt,
         fromSession: true
       };
     }
+
+    return {
+      error: session.reason || "invalid_session",
+      fromSession: true
+    };
   }
 
   if (credential) {
@@ -201,7 +231,10 @@ export default async function handler(req, res) {
     if (!authInfo || !authInfo.email) {
       return res.status(401).json({
         allowed: false,
-        error: "Missing or expired login session"
+        error: "Missing or expired login session",
+        authError: authInfo?.error || "missing_login_session",
+        hasSessionToken: Boolean(sessionToken),
+        hasSessionCookie: Boolean(cookies[SESSION_COOKIE])
       });
     }
 
