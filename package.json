@@ -1,0 +1,16 @@
+{
+  "name": "khoa-hoc-google-login-drive",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "google-auth-library": "^9.15.1",
+    "googleapis": "^140.0.1"
+  },
+  "devDependencies": {
+    "vercel": "^37.14.0"
+  }
+}

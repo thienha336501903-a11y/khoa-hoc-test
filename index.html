@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Khóa học Online</title>
+
+<link rel="preconnect" href="https://accounts.google.com">
+<link rel="preconnect" href="https://cdn.tailwindcss.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+:root{
+  --green:#2f5f23;
+  --green2:#3f7d2d;
+  --brown:#31170c;
+  --orange:#d85c00;
+  --cream:#fbf4ea;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:"Be Vietnam Pro",system-ui,sans-serif;
+  color:var(--brown);
+  background:linear-gradient(180deg,#fffaf3 0%,#fff 45%,#fff8ef 100%);
+}
+.hero{
+  min-height:560px;
+  background:
+    radial-gradient(circle at 72% 40%, rgba(216,92,0,.12), transparent 38%),
+    linear-gradient(90deg,#fff9f0 0%,#fff4e5 48%,#fffaf3 100%);
+  position:relative;
+  overflow:hidden;
+}
+.hero:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg,rgba(255,250,243,.96) 0%,rgba(255,250,243,.75) 43%,rgba(255,250,243,.05) 72%);
+  pointer-events:none;
+}
+.hero-inner{position:relative;z-index:2}
+.hero-img{
+  position:absolute;
+  right:0;
+  top:0;
+  width:58%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  z-index:1;
+}
+.btn-green{
+  background:linear-gradient(135deg,#3f7d2d,#28551e);
+  color:white;
+  box-shadow:0 14px 30px rgba(47,95,35,.24);
+}
+.btn-outline{
+  border:1.5px solid rgba(47,95,35,.42);
+  color:#2f5f23;
+  background:white;
+}
+.card{
+  background:white;
+  border:1px solid rgba(49,23,12,.10);
+  box-shadow:0 10px 28px rgba(49,23,12,.08);
+}
+.lesson-img{aspect-ratio:16/9;object-fit:cover}
+.modal{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.72);
+  z-index:80;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+.modal.show{display:flex}
+.video-frame{width:min(1100px,100%);aspect-ratio:16/9;background:#000;border-radius:20px;overflow:hidden}
+.video-frame iframe{width:100%;height:100%;border:0}
+@media(max-width:768px){
+  .hero{min-height:auto;padding-bottom:30px}
+  .hero:after{background:linear-gradient(180deg,rgba(255,250,243,.98) 0%,rgba(255,250,243,.92) 52%,rgba(255,250,243,.60) 100%)}
+  .hero-img{position:relative;width:100%;height:280px;margin-top:10px;border-radius:0 0 28px 28px}
+}
+</style>
+</head>
+
+<body>
+<header class="px-5 md:px-10 py-5 bg-[#fffaf3]/90 backdrop-blur sticky top-0 z-50 border-b border-black/5">
+  <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 font-black text-[#2f5f23]">
+      <span class="text-2xl">🎓</span>
+      <span id="siteTitle">KHÓA HỌC ONLINE</span>
+    </div>
+    <div id="loginArea" class="flex items-center gap-3">
+      <div id="googleBtn"></div>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <img id="heroImage" class="hero-img" src="https://images.unsplash.com/photo-1608198093002-ad4e005484ec?q=80&w=1600&auto=format&fit=crop" alt="Ảnh khóa học">
+  <div class="hero-inner max-w-6xl mx-auto px-5 md:px-10 py-12 md:py-20">
+    <div class="max-w-xl">
+      <div class="flex items-center gap-2 text-[#2f5f23] font-black mb-6">
+        <span>🎓</span>
+        <span>KHÓA HỌC ONLINE</span>
+      </div>
+
+      <h1 id="courseTitle" class="text-5xl md:text-7xl font-black leading-[.95] tracking-tight">
+        BÁNH MÌ<br><span class="text-[#d85c00]">VIỆT NAM</span>
+      </h1>
+
+      <p id="courseSubtitle" class="mt-6 text-[#2f5f23] font-black text-lg">
+        5 BÀI HỌC – CÔNG THỨC CHI TIẾT – VIDEO HƯỚNG DẪN
+      </p>
+
+      <div class="mt-7 space-y-3 text-[15px] font-medium">
+        <p>⏱️ Video hướng dẫn chi tiết, dễ hiểu</p>
+        <p>✅ Công thức chuẩn, dễ làm tại nhà</p>
+        <p>🍞 Bí quyết làm bánh thành công hơn</p>
+      </div>
+
+      <button onclick="scrollToLessons()" class="btn-green mt-8 rounded-xl px-7 py-4 font-black text-lg inline-flex items-center gap-3">
+        <span class="bg-white text-[#2f5f23] rounded-full w-9 h-9 inline-flex items-center justify-center">▶</span>
+        BẮT ĐẦU HỌC NGAY
+      </button>
+    </div>
+  </div>
+</section>
+
+<main id="lessons" class="max-w-6xl mx-auto px-5 md:px-10 py-10">
+  <div class="text-center mb-8">
+    <h2 class="text-3xl md:text-4xl font-black tracking-tight">🌾 NỘI DUNG KHÓA HỌC 🌾</h2>
+    <p id="lessonCount" class="mt-2 text-black/60 font-semibold">Đăng nhập Gmail để xem bài học</p>
+  </div>
+
+  <div id="statusBox" class="card rounded-2xl p-6 text-center">
+    <p class="font-black text-xl">Vui lòng đăng nhập Gmail để kiểm tra quyền học.</p>
+    <p class="mt-2 text-black/60">Dùng đúng Gmail đã đăng ký / đã thanh toán.</p>
+  </div>
+
+  <div id="lessonList" class="space-y-4 hidden"></div>
+
+  <div class="mt-8 grid md:grid-cols-4 gap-4 rounded-2xl bg-[#fff7ef] border border-black/5 p-5">
+    <div class="flex items-center gap-3"><span class="text-4xl">📖</span><div><b>Công thức chi tiết</b><p class="text-sm text-black/60">Dễ hiểu, dễ làm theo</p></div></div>
+    <div class="flex items-center gap-3"><span class="text-4xl">▶️</span><div><b>Video chất lượng cao</b><p class="text-sm text-black/60">Hướng dẫn từng bước</p></div></div>
+    <div class="flex items-center gap-3"><span class="text-4xl">👨‍🍳</span><div><b>Bí quyết thực tế</b><p class="text-sm text-black/60">Kinh nghiệm từ giảng viên</p></div></div>
+    <div class="flex items-center gap-3"><span class="text-4xl">∞</span><div><b>Học mọi lúc</b><p class="text-sm text-black/60">Trên mọi thiết bị</p></div></div>
+  </div>
+
+  <p class="text-center mt-8 text-black/55 font-medium">❤️ Chúc bạn học tốt và làm thành công!</p>
+</main>
+
+<div id="videoModal" class="modal">
+  <div class="w-full max-w-6xl">
+    <div class="flex justify-between items-center mb-3 text-white">
+      <h3 id="modalTitle" class="font-black text-xl">Video bài học</h3>
+      <button onclick="closeVideo()" class="bg-white text-black rounded-full px-4 py-2 font-black">Đóng ✕</button>
+    </div>
+    <div class="video-frame">
+      <iframe id="videoFrame" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+const COURSE = new URLSearchParams(window.location.search).get("course") || "banh-mi";
+let idToken = "";
+let currentLessons = [];
+
+function scrollToLessons(){
+  document.getElementById("lessons").scrollIntoView({behavior:"smooth"});
+}
+
+function drivePreviewUrl(url){
+  if(!url) return "";
+  const text = String(url).trim();
+  if(text.includes("/preview")) return text;
+
+  let match = text.match(/\/file\/d\/([^/]+)/);
+  if(match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
+
+  match = text.match(/[?&]id=([^&]+)/);
+  if(match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
+
+  return text;
+}
+
+function openVideo(title, url){
+  const preview = drivePreviewUrl(url);
+  document.getElementById("modalTitle").innerText = title || "Video bài học";
+  document.getElementById("videoFrame").src = preview;
+  document.getElementById("videoModal").classList.add("show");
+}
+
+function closeVideo(){
+  document.getElementById("videoFrame").src = "";
+  document.getElementById("videoModal").classList.remove("show");
+}
+
+function openRecipe(url){
+  if(!url) return alert("Bài này chưa có công thức.");
+  window.open(url, "_blank");
+}
+
+function renderLessons(lessons){
+  const list = document.getElementById("lessonList");
+  list.innerHTML = "";
+
+  lessons.forEach((l, index) => {
+    const item = document.createElement("div");
+    item.className = "card rounded-xl overflow-hidden grid md:grid-cols-[330px_1fr_260px] items-stretch";
+
+    item.innerHTML = `
+      <div class="relative">
+        <img class="lesson-img w-full h-full" src="${l.thumbnailUrl || "https://images.unsplash.com/photo-1608198093002-ad4e005484ec?q=80&w=900&auto=format&fit=crop"}" alt="">
+        <button class="absolute inset-0 m-auto w-16 h-16 rounded-full bg-black/35 border-2 border-white text-white text-3xl flex items-center justify-center hover:bg-black/50">▶</button>
+      </div>
+
+      <div class="p-5">
+        <div class="flex items-center gap-4">
+          <span class="bg-[#3f7d2d] text-white rounded-md px-3 py-1 font-black text-sm">BÀI ${l.lesson || index + 1}</span>
+          <h3 class="text-2xl font-black">${l.title || "Bài học"}</h3>
+        </div>
+        <p class="mt-3 text-black/70 leading-relaxed">${l.description || ""}</p>
+        <div class="mt-4 flex flex-wrap gap-5 text-sm text-black/70 font-semibold">
+          <span>🕒 ${l.duration || ""}</span>
+          <span>🌿 ${l.level || "Cơ bản"}</span>
+        </div>
+      </div>
+
+      <div class="p-5 flex md:flex-col gap-3 justify-center">
+        <button class="btn-outline rounded-lg px-4 py-3 font-black hover:bg-[#f7fbf3]" data-video="${encodeURIComponent(l.videoUrl || "")}" data-title="${encodeURIComponent(l.title || "")}">
+          ▶ XEM VIDEO
+        </button>
+        <button class="btn-outline rounded-lg px-4 py-3 font-black hover:bg-[#f7fbf3]" data-recipe="${encodeURIComponent(l.recipeUrl || "")}">
+          📄 XEM CÔNG THỨC
+        </button>
+      </div>
+    `;
+
+    item.querySelector("[data-video]").onclick = (e) => {
+      const btn = e.currentTarget;
+      openVideo(decodeURIComponent(btn.dataset.title), decodeURIComponent(btn.dataset.video));
+    };
+
+    item.querySelector("[data-recipe]").onclick = (e) => {
+      openRecipe(decodeURIComponent(e.currentTarget.dataset.recipe));
+    };
+
+    item.querySelector(".absolute").onclick = () => openVideo(l.title, l.videoUrl);
+
+    list.appendChild(item);
+  });
+
+  document.getElementById("lessonCount").innerText = `${lessons.length} bài học từ cơ bản đến nâng cao`;
+  document.getElementById("statusBox").classList.add("hidden");
+  list.classList.remove("hidden");
+}
+
+async function loadCourseData(credential){
+  const statusBox = document.getElementById("statusBox");
+  statusBox.classList.remove("hidden");
+  statusBox.innerHTML = `<p class="font-black text-xl">Đang kiểm tra quyền học...</p>`;
+
+  try{
+    const res = await fetch("/api/course-data", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ credential, course: COURSE })
+    });
+
+    const data = await res.json();
+
+    if(!res.ok || !data.allowed){
+      statusBox.innerHTML = `
+        <p class="font-black text-xl text-[#b65c4b]">Gmail này chưa được cấp quyền học.</p>
+        <p class="mt-2 text-black/60">Vui lòng đăng nhập đúng Gmail đã mua khóa học, hoặc liên hệ admin để được cấp quyền.</p>
+      `;
+      return;
+    }
+
+    document.getElementById("loginArea").innerHTML = `
+      <div class="text-right text-sm">
+        <p class="font-black text-[#2f5f23]">Đã đăng nhập</p>
+        <p class="text-black/55">${data.email}</p>
+      </div>
+    `;
+
+    if(data.courseInfo){
+      if(data.courseInfo.title) document.getElementById("courseTitle").innerHTML = data.courseInfo.title;
+      if(data.courseInfo.subtitle) document.getElementById("courseSubtitle").innerText = data.courseInfo.subtitle;
+      if(data.courseInfo.heroImage) document.getElementById("heroImage").src = data.courseInfo.heroImage;
+    }
+
+    currentLessons = data.lessons || [];
+    renderLessons(currentLessons);
+
+  }catch(err){
+    statusBox.innerHTML = `
+      <p class="font-black text-xl text-[#b65c4b]">Không kết nối được hệ thống.</p>
+      <p class="mt-2 text-black/60">Kiểm tra lại API, Google Sheet ID và Environment Variables trên Vercel.</p>
+    `;
+  }
+}
+
+async function initGoogle(){
+  try{
+    const res = await fetch("/api/public-config");
+    const config = await res.json();
+
+    google.accounts.id.initialize({
+      client_id: config.googleClientId,
+      callback: (response) => {
+        idToken = response.credential;
+        loadCourseData(response.credential);
+      }
+    });
+
+    google.accounts.id.renderButton(
+      document.getElementById("googleBtn"),
+      { theme:"outline", size:"large", text:"signin_with", shape:"pill" }
+    );
+  }catch(err){
+    document.getElementById("statusBox").innerHTML = `
+      <p class="font-black text-xl text-[#b65c4b]">Chưa cấu hình GOOGLE_CLIENT_ID.</p>
+    `;
+  }
+}
+
+window.onload = initGoogle;
+</script>
+</body>
+</html>
