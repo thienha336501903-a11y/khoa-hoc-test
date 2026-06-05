@@ -176,6 +176,8 @@ const SESSION_KEY = `course_session_token_${COURSE}`;
 const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
 const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
 const SESSION_COOKIE = "course_session_token";
+const APP_VERSION = "session-f5-fix-2026-06-06-2";
+window.APP_VERSION = APP_VERSION;
 
 let currentLessons = [];
 
@@ -534,18 +536,19 @@ async function setupGoogleSignIn(config){
   }
 }
 
+async function tryRestoreSession(){
+  await loadCourseData({
+    sessionToken: getSavedSession()
+  });
+
+  return Boolean(getSavedSession() || document.getElementById("lessonList").classList.contains("hidden") === false);
+}
+
 async function initGoogle(){
-  const savedSession = getSavedSession();
   const configPromise = getPublicConfig();
 
-  if(savedSession){
-    await loadCourseData({
-      sessionToken: savedSession
-    });
-
-    if(getSavedSession()){
-      return;
-    }
+  if(await tryRestoreSession()){
+    return;
   }
 
   const config = await configPromise;
