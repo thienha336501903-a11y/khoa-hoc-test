@@ -953,9 +953,9 @@ function normalizeBunnyEmbedUrl(url){
   // Bunny Direct Play URL:
   // https://iframe.mediadelivery.net/play/LIBRARY_ID/VIDEO_ID
   // đổi thành Embed URL để nhúng web ổn định hơn
-  text = text.replace("https://iframe.mediadelivery.net/play/", "https://player.mediadelivery.net/embed/");
-  text = text.replace("https://video.bunnycdn.com/play/", "https://player.mediadelivery.net/embed/");
-  text = text.replace("https://iframe.mediadelivery.net/embed/", "https://player.mediadelivery.net/embed/");
+  text = text.replace("https://player.mediadelivery.net/embed/", "https://iframe.mediadelivery.net/embed/");
+  text = text.replace("https://iframe.mediadelivery.net/play/", "https://iframe.mediadelivery.net/embed/");
+  text = text.replace("https://video.bunnycdn.com/play/", "https://iframe.mediadelivery.net/embed/");
 
   return text;
 }
@@ -1415,12 +1415,12 @@ function normalizeBunnyIframeUrl(url){
       return text;
     }
 
-    return `https://player.mediadelivery.net/embed/${libraryId}/${videoId}`;
+    return `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
   }catch(err){
     return text
-      .replace("https://iframe.mediadelivery.net/embed/", "https://player.mediadelivery.net/embed/")
-      .replace("https://iframe.mediadelivery.net/play/", "https://player.mediadelivery.net/embed/")
-      .replace("https://video.bunnycdn.com/play/", "https://player.mediadelivery.net/embed/")
+      .replace("https://player.mediadelivery.net/embed/", "https://iframe.mediadelivery.net/embed/")
+      .replace("https://iframe.mediadelivery.net/play/", "https://iframe.mediadelivery.net/embed/")
+      .replace("https://video.bunnycdn.com/play/", "https://iframe.mediadelivery.net/embed/")
       .split("?")[0];
   }
 }
