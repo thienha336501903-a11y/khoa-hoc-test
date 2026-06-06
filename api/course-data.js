@@ -284,7 +284,7 @@ function signBunnyEmbedUrl(videoUrl) {
     .digest("hex");
 
   return {
-    secureVideoUrl: `${parts.normalizedUrl}?token=${token}&expires=${expires}`,
+    secureVideoUrl: `${parts.normalizedUrl}?token=${token}&expires=${expires}&v=${encodeURIComponent(API_VERSION)}`,
     videoProvider: "bunny_embed",
     videoAuthStatus: "signed",
     normalizedVideoUrl: parts.normalizedUrl,
