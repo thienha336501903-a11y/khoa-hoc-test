@@ -237,7 +237,7 @@ function normalizeBunnyEmbedUrl(input) {
       return "";
     }
 
-    return `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
+    return `https://player.mediadelivery.net/embed/${libraryId}/${videoId}`;
   } catch (err) {
     return "";
   }
@@ -247,7 +247,7 @@ function getBunnyEmbedParts(input) {
   const normalized = normalizeBunnyEmbedUrl(input);
   if (!normalized) return null;
 
-  const match = normalized.match(/iframe\.mediadelivery\.net\/embed\/([^/]+)\/([^/?#]+)/);
+  const match = normalized.match(/(?:player|iframe)\.mediadelivery\.net\/embed\/([^/]+)\/([^/?#]+)/);
   if (!match) return null;
 
   return {
