@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 const SESSION_DAYS = Number(process.env.SESSION_DAYS || 30);
 const SESSION_COOKIE = "course_session_token";
-const API_VERSION = "bunny-iframe-sha256-token-2026-06-06";
+const API_VERSION = "bunny-player-sha256-token-2026-06-06";
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -237,7 +237,7 @@ function normalizeBunnyEmbedUrl(input) {
       return "";
     }
 
-    return `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
+    return `https://player.mediadelivery.net/embed/${libraryId}/${videoId}`;
   } catch (err) {
     return "";
   }
