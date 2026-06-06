@@ -83,130 +83,94 @@ body{
 .modal.show{display:flex}
 .video-frame{width:min(1100px,100%);aspect-ratio:16/9;background:#000;border-radius:20px;overflow:hidden}
 .video-frame iframe{width:100%;height:100%;border:0}
-.mobile-header-actions,.lesson-detail{display:none}
-.mobile-pager{display:none}
 @media(max-width:768px){
-  body{background:#fffaf4;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
-  body.lesson-view > header,
-  body.lesson-view > .hero,
-  body.lesson-view > main{display:none}
-  body.lesson-view .lesson-detail{display:block}
-  header{position:sticky;padding:16px 20px;background:#fffaf4;border-bottom:0}
-  header .max-w-6xl{max-width:none;padding:0}
-  #siteTitle{font-size:14px;letter-spacing:.02em}
-  header .text-2xl{font-size:22px}
-  #loginArea{display:flex;position:absolute;right:16px;top:58px;z-index:90;transform:scale(.86);transform-origin:top right}
-  body.is-logged-in #loginArea{display:none}
-  .mobile-header-actions{display:none;align-items:center;gap:14px}
-  body.is-logged-in .mobile-header-actions{display:flex}
-  .mobile-bell,.detail-bell{width:34px;height:34px;border:0;background:transparent;position:relative}
-  .mobile-bell:before,.detail-bell:before{content:"";position:absolute;inset:5px 7px;border:2px solid #124d16;border-radius:14px 14px 10px 10px;border-bottom-width:3px}
-  .mobile-bell:after,.detail-bell:after{content:"";position:absolute;left:14px;bottom:4px;width:8px;height:3px;background:#124d16;border-radius:10px}
-  .mobile-bell span{position:absolute;right:0;top:0;width:18px;height:18px;border-radius:999px;background:#e52222;color:#fff;font-size:11px;font-weight:900;line-height:18px;text-align:center}
-  .mobile-avatar,.detail-avatar{width:36px;height:36px;border-radius:999px;background:radial-gradient(circle at 50% 34%,#fff 0 18%,transparent 19%),radial-gradient(circle at 50% 78%,#fff 0 24%,transparent 25%),linear-gradient(135deg,#2f7b1f,#174f12);box-shadow:0 3px 10px rgba(20,75,20,.16)}
-  .hero{min-height:560px;padding:0 20px 24px;background:#fffaf4;overflow:hidden}
+  .hero{min-height:auto;padding-bottom:30px}
+  .hero:after{background:linear-gradient(180deg,rgba(255,250,243,.98) 0%,rgba(255,250,243,.92) 52%,rgba(255,250,243,.60) 100%)}
+  .hero-img{position:relative;width:100%;height:280px;margin-top:10px;border-radius:0 0 28px 28px}
+}
+
+.mobile-only{display:none}
+.mobile-lesson-page{display:none}
+@media(max-width:768px){
+  body{background:#fffdf9;padding-bottom:calc(18px + env(safe-area-inset-bottom));}
+  .mobile-only{display:block!important}
+  header{position:relative!important;top:auto!important;background:#fffdf9!important;border-bottom:0!important;padding:18px 20px 10px!important}
+  header .max-w-6xl{padding:0!important;max-width:none!important}
+  #siteTitle{font-size:16px;letter-spacing:.02em}
+  #loginArea{min-width:92px;justify-content:flex-end}
+  #googleBtn{transform:scale(.82);transform-origin:right center}
+  .mobile-header-actions{display:flex!important;align-items:center;gap:14px}
+  .mobile-bell{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#103f12;font-size:24px;position:relative;background:#fff}
+  .mobile-bell:before{content:"♧";font-size:24px}
+  .mobile-bell:after{content:"3";position:absolute;top:-3px;right:-3px;width:20px;height:20px;border-radius:999px;background:#e5332a;color:white;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center}
+  .mobile-avatar{width:42px;height:42px;border-radius:999px;background:#2f6b21;color:white;font-size:20px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(47,95,35,.18)}
+  .hero{min-height:auto;padding:18px 0 18px;background:linear-gradient(180deg,#fffdf9 0%,#fff9f0 100%);overflow:hidden}
   .hero:after{display:none}
-  .hero-inner{padding:24px 0 0;max-width:none}
-  .hero-inner .max-w-xl{max-width:62%;position:relative;z-index:3}
-  .hero-inner .flex.items-center{font-size:13px;margin-bottom:18px}
-  #courseTitle{font-size:40px;line-height:1.02;letter-spacing:0}
-  #courseSubtitle{font-size:14px;line-height:1.45;margin-top:16px;text-transform:uppercase}
-  .hero .space-y-3{margin-top:18px;font-size:14px;line-height:1.35}
-  .hero .space-y-3 p{display:flex;align-items:center;gap:10px}
-  .hero .space-y-3 p:before{content:"✓";width:17px;height:17px;border:1.8px solid #245e1d;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#245e1d;font-size:11px;font-weight:900;flex:0 0 auto}
-  .hero .space-y-3 p{color:transparent;font-size:0}
-  .hero .space-y-3 p:nth-child(1):after{content:"Video hướng dẫn chi tiết, dễ hiểu"}
-  .hero .space-y-3 p:nth-child(2):after{content:"Công thức chuẩn, dễ làm tại nhà"}
-  .hero .space-y-3 p:nth-child(3):after{content:"Bí quyết để bánh mì giòn vỏ, xốp ruột"}
-  .hero .space-y-3 p:after{color:var(--brown);font-size:14px}
-  .hero-img{position:absolute;right:-42px;top:118px;width:57%;height:300px;object-fit:cover;border-radius:0;filter:drop-shadow(0 20px 24px rgba(125,70,10,.16));z-index:1;pointer-events:none}
-  .btn-green{position:relative;z-index:4;border-radius:9px;padding:13px 20px;font-size:15px;box-shadow:0 12px 22px rgba(47,95,35,.22)}
-  .btn-green span{width:30px;height:30px}
-  main#lessons{max-width:none;padding:26px 16px 18px;background:linear-gradient(180deg,#fff 0%,#fffaf4 100%)}
-  main#lessons h2{font-size:24px;line-height:1.15}
-  main#lessons h2:before{content:"🌾 ";color:#e88b19}
-  main#lessons h2:after{content:" 🌾";color:#e88b19}
-  #lessonCount{font-size:14px;margin-top:6px}
-  #statusBox{border-radius:12px;padding:20px;margin-top:8px}
-  #statusBox .text-xl{font-size:16px}
-  #lessonList{display:block}
-  #lessonList.hidden{display:none}
-  .mobile-lesson-card{display:grid;grid-template-columns:102px minmax(0,1fr) 122px;gap:10px;align-items:center;background:#fff;border:1px solid rgba(49,23,12,.06);border-radius:12px;box-shadow:0 6px 20px rgba(49,23,12,.06);padding:8px;margin-bottom:10px}
-  .mobile-thumb{height:82px;border-radius:8px;overflow:hidden;position:relative;background:#eee}
-  .mobile-thumb img{width:100%;height:100%;object-fit:cover}
-  .mobile-play{position:absolute;inset:0;margin:auto;width:42px;height:42px;border-radius:999px;border:1px solid rgba(255,255,255,.7);background:rgba(0,0,0,.32);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center}
-  .mobile-lesson-body{min-width:0}
-  .mobile-lesson-title{font-size:14px;font-weight:900;line-height:1.25;margin:4px 0;color:#241005}
-  .mobile-lesson-desc{font-size:13px;line-height:1.35;color:#241005;margin:0 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .mobile-badge{display:inline-flex;background:#27651c;color:#fff;border-radius:5px;padding:4px 8px;font-size:12px;font-weight:900}
-  .mobile-meta{display:flex;gap:12px;font-size:12px;color:#244f1e;font-weight:700;white-space:nowrap}
-  .mobile-open-lesson{height:48px;border:1.5px solid rgba(47,95,35,.28);border-radius:8px;background:#fff;color:#245e1d;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px}
-  .mobile-pager{display:flex;flex-direction:column;align-items:center;gap:14px;margin:26px 0 22px}
-  .pager-row{display:flex;align-items:center;justify-content:center;gap:24px}
-  .pager-arrow{width:42px;height:42px;border-radius:999px;border:1px solid rgba(49,23,12,.18);background:#fff;color:#241005;font-size:30px;line-height:1;box-shadow:0 3px 10px rgba(49,23,12,.05)}
-  .pager-dots{display:flex;gap:14px}
-  .pager-dot{width:10px;height:10px;border-radius:999px;background:#d8d8d8;border:0}
-  .pager-dot.active{background:#2f5f23}
-  .pager-count{font-size:16px;color:#241005}
-  main#lessons > .mt-8.grid{grid-template-columns:repeat(4,1fr);gap:8px;border-radius:12px;background:#fffaf4;box-shadow:0 8px 24px rgba(49,23,12,.06);padding:14px;margin-top:20px}
-  main#lessons > .mt-8.grid > div{display:block;text-align:left}
-  main#lessons > .mt-8.grid span{font-size:29px;display:block;color:#245e1d}
-  main#lessons > .mt-8.grid b{font-size:11px;line-height:1.2;display:block}
-  main#lessons > .mt-8.grid p{font-size:10px;line-height:1.2;margin-top:4px}
-  main#lessons > p:last-child{font-size:13px;margin-top:16px}
-  .lesson-detail{min-height:100vh;background:#fff;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
-  .lesson-detail-header{height:72px;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid rgba(49,23,12,.08);background:#fff;position:sticky;top:0;z-index:20}
-  .lesson-detail-header h2{font-size:23px;font-weight:900;margin:0;color:#111;flex:1}
-  .detail-back{border:0;background:transparent;color:#155414;font-size:44px;line-height:1;padding:0 16px 2px 0}
-  .detail-actions{display:flex;align-items:center;gap:14px}
-  .detail-bell:before{border-color:#111}.detail-bell:after{background:#111}
-  .detail-content{padding:16px}
-  .detail-breadcrumb{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:16px;line-height:1.35;color:#191919}
-  .detail-lesson-label{font-size:16px;color:#155414;font-weight:900;margin:6px 0 14px}
-  .detail-video-card{border-radius:10px;overflow:hidden;background:#111;box-shadow:0 8px 24px rgba(0,0,0,.08)}
-  .detail-video-media{position:relative;aspect-ratio:16/9;background:#111}
-  .detail-video-media img,.detail-video-media iframe{width:100%;height:100%;object-fit:cover;border:0;display:block}
-  .detail-video-media iframe{background:#000}
-  .detail-big-play{position:absolute;inset:0;margin:auto;width:68px;height:68px;border-radius:999px;border:0;background:rgba(0,0,0,.36);color:#fff;font-size:34px;display:flex;align-items:center;justify-content:center}
-  .fake-controls{height:58px;background:linear-gradient(90deg,#141414,#1c1c1c);display:grid;grid-template-columns:34px 1fr 112px 30px 28px;gap:10px;align-items:center;padding:0 16px;color:#fff}
-  .fake-play{font-size:25px}
-  .fake-progress{height:7px;background:#363636;border-radius:999px;position:relative}
-  .fake-progress:before{content:"";position:absolute;left:0;top:0;bottom:0;width:31%;border-radius:999px;background:#2f8a1e}
-  .fake-progress:after{content:"";position:absolute;left:29%;top:50%;width:16px;height:16px;background:#fff;border-radius:999px;transform:translateY(-50%)}
-  .fake-time{font-size:15px;font-weight:800;white-space:nowrap}
-  .fake-volume,.fake-full{font-size:24px;text-align:center}
-  .recipe-card{margin-top:16px;border-radius:12px;background:#fff;border:1px solid rgba(49,23,12,.08);box-shadow:0 10px 28px rgba(49,23,12,.08);padding:16px}
-  .recipe-tab{display:inline-block;color:#155414;font-size:17px;font-weight:900;padding:0 12px 8px;border-bottom:3px solid #155414;margin-bottom:12px}
-  .recipe-body{max-height:600px;overflow-y:auto;padding:8px 16px 26px 8px;font-size:17px;line-height:1.55;color:#111;position:relative;scrollbar-color:#bdbdbd transparent;scrollbar-width:thin}
-  .recipe-body.collapsed{max-height:470px;overflow:hidden}
-  .recipe-body.collapsed:after{content:"";position:absolute;left:0;right:14px;bottom:0;height:90px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff)}
-  .recipe-body h3{font-size:18px;margin:14px 0 8px;font-weight:900}
-  .recipe-body ol,.recipe-body ul{padding-left:22px}
-  .recipe-body li{margin:7px 0}
-  .recipe-body hr{border:0;border-top:1px solid rgba(0,0,0,.1);margin:22px 0}
-  .recipe-link{display:inline-flex;margin-top:12px;color:#155414;font-weight:900;text-decoration:underline}
-  .recipe-toggle{width:100%;border:0;background:#fff;color:#155414;font-size:16px;font-weight:900;padding:12px 0 0;display:flex;align-items:center;justify-content:center;gap:12px}
-  .recipe-toggle span{font-size:24px}
-  .detail-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px}
-  .detail-nav button{height:52px;border-radius:8px;font-size:16px;font-weight:800;padding:0 18px}
-  .prev-lesson{background:#fff;border:1.5px solid #245e1d;color:#245e1d}
-  .next-lesson{background:#1d650d;border:1.5px solid #1d650d;color:#fff;min-width:154px}
+  .hero-inner{padding:0 20px!important;max-width:none!important}
+  .hero-inner .max-w-xl{max-width:none;position:relative;z-index:2}
+  .hero-img{position:absolute!important;top:72px!important;right:-18px!important;width:50%!important;height:210px!important;margin:0!important;border-radius:0!important;object-fit:cover;object-position:center;filter:drop-shadow(0 16px 24px rgba(120,70,20,.15));z-index:1!important;opacity:.98}
+  .hero .flex.items-center.gap-2{display:none!important}
+  #courseTitle{font-size:50px!important;line-height:.96!important;letter-spacing:-.05em!important;max-width:265px;margin-top:8px;color:#31170c}
+  #courseTitle span{color:#d85c00!important}
+  #courseSubtitle{max-width:320px;font-size:17px!important;line-height:1.42!important;margin-top:20px!important;color:#24571c!important;text-transform:uppercase}
+  .hero .mt-7{margin-top:24px!important;max-width:345px;font-size:15.5px!important;line-height:1.6}
+  .hero .mt-7 p{display:flex;align-items:flex-start;gap:12px;margin:10px 0;font-size:0}
+  .hero .mt-7 p:before{content:"✓";width:20px;height:20px;flex:0 0 20px;border:2px solid #2f5f23;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#2f5f23;font-weight:900;font-size:12px;margin-top:2px}
+  .hero .mt-7 p:nth-child(1)::after{content:"Video hướng dẫn chi tiết, dễ hiểu";font-size:15.5px;color:#2b251f}
+  .hero .mt-7 p:nth-child(2)::after{content:"Công thức chuẩn, dễ làm tại nhà";font-size:15.5px;color:#2b251f}
+  .hero .mt-7 p:nth-child(3)::after{content:"Bí quyết làm bánh mì giòn vỏ, xốp ruột";font-size:15.5px;color:#2b251f}
+  .btn-green{border-radius:12px!important;padding:13px 20px!important;font-size:15px!important;margin-top:24px!important}
+  .btn-green span{width:30px!important;height:30px!important}
+  main#lessons{padding:28px 16px 22px!important;max-width:none!important}
+  main#lessons>.text-center h2{font-size:27px!important;line-height:1.15;color:#31170c}
+  #lessonCount{font-size:14px;margin-top:7px!important}
+  #statusBox{margin-top:22px;border-radius:18px!important}
+  #lessonList{margin-top:26px;display:block}
+  #lessonList.hidden{display:none!important}
+  .mobile-course-card{display:grid!important;grid-template-columns:92px 1fr;gap:10px;align-items:center;border-radius:16px!important;padding:0!important;overflow:hidden;min-height:112px;box-shadow:0 10px 28px rgba(49,23,12,.08)!important}
+  .lesson-thumb-wrap{width:92px;height:112px;position:relative;overflow:hidden}
+  .mobile-course-card .lesson-img{width:100%;height:100%;aspect-ratio:auto;object-fit:cover}
+  .mobile-play-overlay{position:absolute;inset:0;margin:auto;width:48px;height:48px;border-radius:999px;background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.82);color:white;display:flex;align-items:center;justify-content:center;font-size:20px}
+  .lesson-body{padding:12px 10px 12px 2px;min-width:0}
+  .lesson-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .lesson-badge{flex:0 0 auto;background:#2f5f23;color:white;border-radius:6px;padding:5px 8px;font-weight:900;font-size:12px}
+  .lesson-title{font-size:16px;line-height:1.25;font-weight:900;color:#32180d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lesson-desc{font-size:13.5px;line-height:1.45;color:rgba(0,0,0,.72);margin:6px 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .lesson-meta{display:flex;align-items:center;gap:14px;color:rgba(0,0,0,.68);font-size:12.5px;font-weight:700}
+  .mobile-open-btn{margin-top:10px;width:100%;border:1.5px solid rgba(47,95,35,.35);border-radius:10px;padding:10px;background:white;color:#24571c;font-weight:900;font-size:13px}
+  .mobile-pager{display:flex!important;align-items:center;justify-content:center;gap:22px;margin:28px 0 8px}
+  .pager-btn{width:44px;height:44px;border-radius:999px;border:1px solid rgba(0,0,0,.12);background:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;color:#111;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+  .pager-dots{display:flex;align-items:center;gap:12px}.pager-dot{width:11px;height:11px;border-radius:999px;background:#d8d8d8}.pager-dot.active{background:#2f5f23}
+  .pager-info{text-align:center;font-size:17px;margin:8px 0 28px;color:#2b2b2b}.pager-info b{color:#2f5f23;font-size:20px}
+  main#lessons .mt-8.grid{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:8px!important;border-radius:18px!important;background:#fffaf4!important;padding:14px 10px!important;box-shadow:0 10px 24px rgba(49,23,12,.05)}
+  main#lessons .mt-8.grid>div{display:block!important;text-align:center} main#lessons .mt-8.grid span{display:block;font-size:30px!important;margin-bottom:5px} main#lessons .mt-8.grid b{display:block;font-size:10px;line-height:1.2} main#lessons .mt-8.grid p{font-size:9px!important;line-height:1.2}
+  .modal{display:none!important}
+  body.mobile-lesson-active header,body.mobile-lesson-active .hero,body.mobile-lesson-active main#lessons{display:none!important}
+  body.mobile-lesson-active .mobile-lesson-page{display:block!important}
+  .mobile-lesson-page{min-height:100vh;background:#fffdf9;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
+  .lesson-app-header{height:76px;display:flex;align-items:center;justify-content:space-between;padding:18px 18px 12px;border-bottom:1px solid rgba(0,0,0,.08);background:#fff}
+  .lesson-back{width:38px;height:38px;border:0;background:transparent;font-size:34px;color:#0e5219;display:flex;align-items:center;justify-content:center}
+  .lesson-app-title{flex:1;padding-left:8px;font-size:25px;font-weight:900;color:#171717}
+  .lesson-head-icons{display:flex;gap:12px;align-items:center}
+  .lesson-detail-wrap{padding:18px 16px 0}
+  .lesson-breadcrumb{display:flex;flex-wrap:wrap;gap:8px;color:#3b3b3b;font-size:16px;margin-bottom:5px}
+  .lesson-green-title{color:#1f5a1a;font-size:18px;line-height:1.35;font-weight:900;margin-bottom:18px}
+  .lesson-video-card{border-radius:14px;overflow:hidden;background:#111;box-shadow:0 12px 26px rgba(0,0,0,.12)}
+  .lesson-video-preview{height:196px;position:relative;background:#222}
+  .lesson-video-preview img,.lesson-video-preview iframe{width:100%;height:100%;object-fit:cover;border:0;display:block}
+  .lesson-big-play{position:absolute;inset:0;margin:auto;width:78px;height:78px;border:0;border-radius:999px;background:rgba(0,0,0,.38);color:white;font-size:38px;display:flex;align-items:center;justify-content:center}
+  .fake-controls{height:54px;display:flex;align-items:center;gap:12px;padding:0 14px;background:linear-gradient(180deg,rgba(0,0,0,.86),#111);color:white}.fake-play,.fake-volume,.fake-full{font-size:24px;flex:0 0 auto}
+  .fake-progress{flex:1;height:7px;background:rgba(255,255,255,.18);border-radius:99px;position:relative}.fake-progress:before{content:"";position:absolute;left:0;top:0;bottom:0;width:28%;background:#2f8d1d;border-radius:99px}.fake-progress:after{content:"";position:absolute;left:28%;top:50%;transform:translate(-50%,-50%);width:16px;height:16px;background:white;border-radius:99px}
+  .fake-time{font-weight:900;font-size:15px;white-space:nowrap}
+  .recipe-card{margin-top:18px;background:white;border-radius:16px;box-shadow:0 10px 28px rgba(49,23,12,.08);border:1px solid rgba(0,0,0,.06);padding:18px 18px 14px}
+  .recipe-tab{display:inline-block;color:#24571c;font-size:17px;font-weight:900;padding-bottom:10px;border-bottom:3px solid #24571c;margin-bottom:18px}
+  .recipe-content{position:relative;max-height:600px;overflow-y:auto;padding-right:14px;font-size:17px;line-height:1.65;color:#111}
+  .recipe-content.collapsed{max-height:520px;overflow:hidden}.recipe-content.collapsed:after{content:"";position:absolute;left:0;right:12px;bottom:0;height:120px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff 86%);pointer-events:none}
+  .recipe-content h3{font-size:21px;font-weight:900;margin:8px 0 14px}.recipe-content h4{font-size:18px;font-weight:900;margin:18px 0 4px}.recipe-content ul{margin:0 0 20px 22px}.recipe-content li{margin-bottom:7px}
+  .recipe-more{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;border:0;background:white;color:#155216;font-weight:900;font-size:17px;padding:18px 0 6px}
+  .lesson-nav-bottom{display:flex;justify-content:space-between;gap:16px;padding:22px 16px 0}.lesson-nav-bottom button{flex:1;height:58px;border-radius:12px;font-size:18px;font-weight:800}.lesson-prev{background:white;border:1.5px solid #2f5f23;color:#1f5a1a}.lesson-next{border:0;background:linear-gradient(135deg,#2f7b1e,#145608);color:white;box-shadow:0 10px 22px rgba(47,95,35,.22)}
 }
-@media(max-width:430px){
-  #courseTitle{font-size:38px}
-  .hero{min-height:548px}
-  .hero-img{right:-58px;top:132px;width:62%;height:286px}
-  .hero-inner .max-w-xl{max-width:68%}
-  .hero .space-y-3 p:after{font-size:13px}
-  .mobile-lesson-card{grid-template-columns:96px minmax(0,1fr) 108px}
-  .mobile-open-lesson{height:44px;font-size:12px}
-}
-@media(max-width:370px){
-  #courseTitle{font-size:34px}
-  .hero-img{opacity:.9;right:-66px}
-  .mobile-lesson-card{grid-template-columns:90px minmax(0,1fr)}
-  .mobile-meta{font-size:11px;gap:8px}
-}
+
 </style>
 </head>
 
@@ -218,11 +182,8 @@ body{
       <span id="siteTitle">KHÓA HỌC ONLINE</span>
     </div>
     <div id="loginArea" class="flex items-center gap-3">
+      <div class="mobile-header-actions mobile-only"><span class="mobile-bell"></span><span class="mobile-avatar">●</span></div>
       <div id="googleBtn"></div>
-    </div>
-    <div id="mobileHeaderActions" class="mobile-header-actions">
-      <button class="mobile-bell" type="button" aria-label="Thong bao"><span>3</span></button>
-      <div class="mobile-avatar" aria-hidden="true"></div>
     </div>
   </div>
 </header>
@@ -241,7 +202,7 @@ body{
       </h1>
 
       <p id="courseSubtitle" class="mt-6 text-[#2f5f23] font-black text-lg">
-        5 BÀI HỌC – CÔNG THỨC CHI TIẾT – VIDEO HƯỚNG DẪN
+        20 BÀI HỌC – CÔNG THỨC CHI TIẾT – VIDEO HƯỚNG DẪN
       </p>
 
       <div class="mt-7 space-y-3 text-[15px] font-medium">
@@ -281,39 +242,34 @@ body{
   <p class="text-center mt-8 text-black/55 font-medium">❤️ Chúc bạn học tốt và làm thành công!</p>
 </main>
 
-<section id="lessonDetail" class="lesson-detail hidden">
-  <div class="lesson-detail-header">
-    <button class="detail-back" type="button" onclick="showHomeView()" aria-label="Quay lai">‹</button>
-    <h2>Bánh mì Việt Nam</h2>
-    <div class="detail-actions">
-      <button class="detail-bell" type="button" aria-label="Thong bao"></button>
-      <div class="detail-avatar" aria-hidden="true"></div>
+
+<section id="mobileLessonPage" class="mobile-lesson-page">
+  <div class="lesson-app-header">
+    <button class="lesson-back" onclick="goHomeView()">‹</button>
+    <div class="lesson-app-title">Bánh mì Việt Nam</div>
+    <div class="lesson-head-icons"><span class="mobile-bell"></span><span class="mobile-avatar">●</span></div>
+  </div>
+  <div class="lesson-detail-wrap">
+    <div class="lesson-breadcrumb"><span>Trang chủ</span><span>›</span><span>Khóa học</span><span>›</span><span>Bánh mì Việt Nam</span><span>›</span></div>
+    <div id="mobileLessonGreenTitle" class="lesson-green-title">Bài 1: Bánh mì Việt Nam truyền thống</div>
+    <div class="lesson-video-card">
+      <div id="mobileLessonVideo" class="lesson-video-preview">
+        <img id="mobileLessonThumb" src="" alt="">
+        <button class="lesson-big-play" onclick="playCurrentLessonVideo()">▶</button>
+      </div>
+      <div class="fake-controls">
+        <div class="fake-play">▶</div><div class="fake-progress"></div><div id="mobileLessonTime" class="fake-time">02:35 / 31:45</div><div class="fake-volume">♬</div><div class="fake-full">⛶</div>
+      </div>
+    </div>
+    <div class="recipe-card">
+      <div class="recipe-tab">Công thức</div>
+      <div id="recipeContent" class="recipe-content collapsed"></div>
+      <button id="recipeMoreBtn" class="recipe-more" onclick="toggleRecipeMore()">Xem thêm <span>⌄</span></button>
     </div>
   </div>
-
-  <div class="detail-content">
-    <div class="detail-breadcrumb">
-      <span>Trang chủ</span>
-      <span>›</span>
-      <span>Khóa học</span>
-      <span>›</span>
-      <span>Bánh mì Việt Nam</span>
-      <span>›</span>
-    </div>
-    <p id="detailLessonLabel" class="detail-lesson-label">Bài 1: Bài học</p>
-
-    <div id="detailVideoCard" class="detail-video-card"></div>
-
-    <article class="recipe-card">
-      <div class="recipe-tab">Công thức</div>
-      <div id="recipeBody" class="recipe-body collapsed"></div>
-      <button id="recipeToggle" class="recipe-toggle" type="button" onclick="toggleRecipe()">Xem thêm <span>⌄</span></button>
-    </article>
-
-    <div class="detail-nav">
-      <button type="button" class="prev-lesson" onclick="goLesson(-1)">← Bài trước</button>
-      <button type="button" class="next-lesson" onclick="goLesson(1)">Bài tiếp theo →</button>
-    </div>
+  <div class="lesson-nav-bottom">
+    <button class="lesson-prev" onclick="openPrevLesson()">← Bài trước</button>
+    <button class="lesson-next" onclick="openNextLesson()">Bài tiếp theo →</button>
   </div>
 </section>
 
@@ -335,613 +291,189 @@ const SESSION_KEY = `course_session_token_${COURSE}`;
 const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
 const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
 const SESSION_COOKIE = "course_session_token";
-const APP_VERSION = "session-f5-fix-2026-06-06-2";
+const APP_VERSION = "mobile-iphone-ui-2026-06-06";
 window.APP_VERSION = APP_VERSION;
 
 let currentLessons = [];
 let currentView = "home";
 let currentLessonIndex = 0;
 let currentPage = 0;
-let recipeExpanded = false;
 const MOBILE_PAGE_SIZE = 5;
 
 function setSessionCookie(token, expiresAt){
   if(!token) return;
-
   let cookie = `${SESSION_COOKIE}=${encodeURIComponent(token)}; path=/; samesite=lax`;
-
-  if(expiresAt){
-    cookie += `; expires=${new Date(Number(expiresAt)).toUTCString()}`;
-  }
-
-  if(location.protocol === "https:"){
-    cookie += "; secure";
-  }
-
+  if(expiresAt) cookie += `; expires=${new Date(Number(expiresAt)).toUTCString()}`;
+  if(location.protocol === "https:") cookie += "; secure";
   document.cookie = cookie;
 }
-
 function getSessionCookie(){
   const cookies = document.cookie ? document.cookie.split(";") : [];
-
   for(const cookie of cookies){
     const index = cookie.indexOf("=");
     if(index === -1) continue;
-
-    const key = cookie.slice(0, index).trim();
-    const value = cookie.slice(index + 1).trim();
-
-    if(key === SESSION_COOKIE){
-      return decodeURIComponent(value);
-    }
+    const key = cookie.slice(0,index).trim();
+    const value = cookie.slice(index+1).trim();
+    if(key === SESSION_COOKIE) return decodeURIComponent(value);
   }
-
   return null;
 }
-
-function clearSessionCookie(){
-  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; samesite=lax`;
-}
-
-function scrollToLessons(){
-  document.getElementById("lessons").scrollIntoView({behavior:"smooth"});
-}
-
+function clearSessionCookie(){document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; samesite=lax`;}
+function scrollToLessons(){document.getElementById("lessons").scrollIntoView({behavior:"smooth"});}
+function isMobile(){return window.matchMedia("(max-width: 768px)").matches;}
+function lessonThumb(l){return l.thumbnailUrl || "https://images.unsplash.com/photo-1608198093002-ad4e005484ec?q=80&w=900&auto=format&fit=crop";}
 function getVideoUrl(url){
   if(!url) return "";
-
   const text = String(url).trim();
-
-  if(
-    text.includes("iframe.mediadelivery.net") ||
-    text.includes("bunnycdn.com") ||
-    text.includes("youtube.com") ||
-    text.includes("youtu.be") ||
-    text.includes("vimeo.com")
-  ){
-    return text;
-  }
-
+  if(text.includes("iframe.mediadelivery.net") || text.includes("bunnycdn.com") || text.includes("youtube.com") || text.includes("youtu.be") || text.includes("vimeo.com")) return text;
   if(text.includes("/preview")) return text;
-
   let match = text.match(/\/file\/d\/([^/]+)/);
   if(match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
-
   match = text.match(/[?&]id=([^&]+)/);
   if(match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
-
   return text;
 }
-
 function openVideo(title, url){
   const preview = getVideoUrl(url);
   if(!preview) return alert("Bài này chưa có video.");
-
   document.getElementById("modalTitle").innerText = title || "Video bài học";
   document.getElementById("videoFrame").src = preview;
   document.getElementById("videoModal").classList.add("show");
 }
-
-function closeVideo(){
-  document.getElementById("videoFrame").src = "";
-  document.getElementById("videoModal").classList.remove("show");
-}
-
-function openRecipe(url){
-  if(!url) return alert("Bài này chưa có công thức.");
-  window.open(url, "_blank");
-}
-
+function closeVideo(){document.getElementById("videoFrame").src="";document.getElementById("videoModal").classList.remove("show");}
+function openRecipe(url){if(!url) return alert("Bài này chưa có công thức.");window.open(url,"_blank");}
 function clearSession(){
-  try{
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(SESSION_EMAIL_KEY);
-    localStorage.removeItem(SESSION_EXP_KEY);
-  }catch(err){
-    console.warn("Cannot clear login session:", err);
-  }
-
+  try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(SESSION_EMAIL_KEY);localStorage.removeItem(SESSION_EXP_KEY);}catch(err){console.warn("Cannot clear login session:",err);}
   clearSessionCookie();
 }
-
 function saveSession(data){
   try{
-    if(data && data.sessionToken){
-      localStorage.setItem(SESSION_KEY, data.sessionToken);
-    }
-
-    if(data && data.email){
-      localStorage.setItem(SESSION_EMAIL_KEY, data.email);
-    }
-
-    if(data && data.sessionExpiresAt){
-      localStorage.setItem(SESSION_EXP_KEY, String(data.sessionExpiresAt));
-    }
-  }catch(err){
-    console.warn("Cannot save login session:", err);
-  }
-
-  if(data && data.sessionToken){
-    setSessionCookie(data.sessionToken, data.sessionExpiresAt);
-  }
+    if(data && data.sessionToken) localStorage.setItem(SESSION_KEY,data.sessionToken);
+    if(data && data.email) localStorage.setItem(SESSION_EMAIL_KEY,data.email);
+    if(data && data.sessionExpiresAt) localStorage.setItem(SESSION_EXP_KEY,String(data.sessionExpiresAt));
+  }catch(err){console.warn("Cannot save login session:",err);}
+  if(data && data.sessionToken) setSessionCookie(data.sessionToken,data.sessionExpiresAt);
 }
-
 function getSavedSession(){
-  let token = null;
-  let exp = 0;
-
-  try{
-    token = localStorage.getItem(SESSION_KEY);
-    exp = Number(localStorage.getItem(SESSION_EXP_KEY) || 0);
-  }catch(err){
-    console.warn("Cannot read login session:", err);
-    return getSessionCookie();
-  }
-
-  if(!token){
-    return getSessionCookie();
-  }
-
-  if(exp && Date.now() > exp){
-    clearSession();
-    return null;
-  }
-
+  let token=null, exp=0;
+  try{token=localStorage.getItem(SESSION_KEY);exp=Number(localStorage.getItem(SESSION_EXP_KEY)||0);}catch(err){console.warn("Cannot read login session:",err);return getSessionCookie();}
+  if(!token) return getSessionCookie();
+  if(exp && Date.now()>exp){clearSession();return null;}
   return token;
 }
-
 function showLoggedIn(email){
-  document.body.classList.add("is-logged-in");
   document.getElementById("loginArea").innerHTML = `
-    <div class="text-right text-sm">
+    <div class="mobile-header-actions mobile-only"><span class="mobile-bell"></span><span class="mobile-avatar">●</span></div>
+    <div class="text-right text-sm hidden md:block">
       <p class="font-black text-[#2f5f23]">Đã đăng nhập</p>
       <p class="text-black/55">${email || ""}</p>
-      <button onclick="logoutGoogle()" class="mt-2 text-red-600 font-bold text-xs">
-        Đăng xuất
-      </button>
-    </div>
-  `;
+      <button onclick="logoutGoogle()" class="mt-2 text-red-600 font-bold text-xs">Đăng xuất</button>
+    </div>`;
 }
-
 function showLoginButton(){
-  document.body.classList.remove("is-logged-in");
-  const area = document.getElementById("loginArea");
-  if(!area) return;
-
-  if(!document.getElementById("googleBtn")){
-    area.innerHTML = `<div id="googleBtn"></div>`;
-  }
+  const area=document.getElementById("loginArea"); if(!area) return;
+  if(!document.getElementById("googleBtn")) area.innerHTML = `<div id="googleBtn"></div>`;
 }
-
-function isMobileView(){
-  return window.matchMedia("(max-width: 768px)").matches;
-}
-
-function lessonNumber(lesson, index){
-  return lesson.lesson || index + 1;
-}
-
-function lessonThumb(lesson){
-  return lesson.thumbnailUrl || document.getElementById("heroImage").src || "https://images.unsplash.com/photo-1608198093002-ad4e005484ec?q=80&w=900&auto=format&fit=crop";
-}
-
-function formatLessonTotal(){
-  return currentLessons.length || 20;
-}
-
-function changeLessonPage(delta){
-  const totalPages = Math.max(1, Math.ceil(currentLessons.length / MOBILE_PAGE_SIZE));
-  currentPage = Math.min(totalPages - 1, Math.max(0, currentPage + delta));
-  renderLessons(currentLessons);
-}
-
-function setLessonPage(page){
-  currentPage = page;
-  renderLessons(currentLessons);
-}
-
-function renderMobilePager(total){
-  const totalPages = Math.max(1, Math.ceil(total / MOBILE_PAGE_SIZE));
-  const shown = Math.min(MOBILE_PAGE_SIZE, Math.max(0, total - currentPage * MOBILE_PAGE_SIZE));
-  const pager = document.createElement("div");
-  pager.className = "mobile-pager";
-  pager.innerHTML = `
-    <div class="pager-row">
-      <button class="pager-arrow" type="button" onclick="changeLessonPage(-1)" aria-label="Trang truoc">‹</button>
-      <div class="pager-dots">
-        ${Array.from({length: totalPages}).map((_, i) => `
-          <button class="pager-dot ${i === currentPage ? "active" : ""}" type="button" onclick="setLessonPage(${i})" aria-label="Trang ${i + 1}"></button>
-        `).join("")}
-      </div>
-      <button class="pager-arrow" type="button" onclick="changeLessonPage(1)" aria-label="Trang sau">›</button>
-    </div>
-    <p class="pager-count">Hiển thị ${shown} / ${total} bài</p>
-  `;
-  return pager;
-}
-
-function showHomeView(){
-  currentView = "home";
-  document.body.classList.remove("lesson-view");
-  document.getElementById("lessonDetail").classList.add("hidden");
-  window.scrollTo({top:0, behavior:"smooth"});
-}
-
-function showLessonDetail(index){
-  currentLessonIndex = Math.min(currentLessons.length - 1, Math.max(0, index));
-  currentView = "lesson";
-  recipeExpanded = false;
-  renderLessonDetail();
-  document.body.classList.add("lesson-view");
-  document.getElementById("lessonDetail").classList.remove("hidden");
-  window.scrollTo({top:0, behavior:"smooth"});
-}
-
-function toggleRecipe(){
-  recipeExpanded = !recipeExpanded;
-  renderRecipeContent(currentLessons[currentLessonIndex]);
-}
-
-function goLesson(delta){
-  if(!currentLessons.length) return;
-  currentLessonIndex = Math.min(currentLessons.length - 1, Math.max(0, currentLessonIndex + delta));
-  recipeExpanded = false;
-  renderLessonDetail();
-  window.scrollTo({top:0, behavior:"smooth"});
-}
-
-function renderDetailVideo(lesson){
-  const card = document.getElementById("detailVideoCard");
-  const preview = getVideoUrl(lesson.videoUrl);
-  const useIframe = preview && (
-    preview.includes("iframe.mediadelivery.net") ||
-    preview.includes("/preview") ||
-    preview.includes("youtube.com") ||
-    preview.includes("youtu.be") ||
-    preview.includes("vimeo.com")
-  );
-
-  card.innerHTML = `
-    <div class="detail-video-media">
-      ${useIframe ? `<iframe src="${preview}" allow="autoplay; encrypted-media" allowfullscreen></iframe>` : `<img src="${lessonThumb(lesson)}" alt="">`}
-      <button class="detail-big-play" type="button" aria-label="Phat video">▶</button>
-    </div>
-    <div class="fake-controls">
-      <div class="fake-play">▶</div>
-      <div class="fake-progress"></div>
-      <div class="fake-time">02:35 / ${lesson.duration || "31:45"}</div>
-      <div class="fake-volume">◕</div>
-      <div class="fake-full">⛶</div>
-    </div>
-  `;
-}
-
-function sampleRecipeHtml(lesson){
-  const title = lesson.title || "Bánh mì Việt Nam truyền thống";
-  return `
-    <h3>Nguyên liệu (cho 10 ổ bánh)</h3>
-    <ul>
-      <li>Bột mì số 13 hoặc bột mì đa dụng: 1000g</li>
-      <li>Nước: 650ml</li>
-      <li>Men instant: 6g</li>
-      <li>Muối: 18g</li>
-      <li>Đường: 10g</li>
-      <li>Dầu ăn: 20g</li>
-    </ul>
-    <hr>
-    <h3>Các bước thực hiện</h3>
-    <ol>
-      <li><b>Trộn bột</b><br>Cho bột mì, men, đường vào tô trộn đều. Thêm nước từ từ, trộn đến khi bột hòa quyện.</li>
-      <li><b>Nhồi bột</b><br>Nhồi bột 15-20 phút đến khi bột mịn, đàn hồi tốt, không dính tay.</li>
-      <li><b>Ủ bột lần 1</b><br>Ủ bột ở nhiệt độ 28-30°C trong 60-90 phút đến khi bột nở gấp đôi.</li>
-      <li><b>Chia bột, tạo hình</b><br>Chia bột thành 10 phần đều nhau, vê tròn, để nghỉ 15 phút rồi tạo hình.</li>
-      <li><b>Ủ bột lần 2</b><br>Ủ bột đã tạo hình trong 45-60 phút cho bột nở 1.5-2 lần.</li>
-      <li><b>Nướng bánh</b><br>Làm nóng lò, rạch mặt bánh, xịt hơi nước và nướng đến khi vỏ vàng giòn.</li>
-    </ol>
-    <p><b>Ghi chú:</b> ${title} ngon nhất khi ăn nóng, vỏ giòn và ruột còn mềm ẩm.</p>
-  `;
-}
-
-function renderRecipeContent(lesson){
-  const body = document.getElementById("recipeBody");
-  const toggle = document.getElementById("recipeToggle");
-  body.classList.toggle("collapsed", !recipeExpanded);
-  body.innerHTML = sampleRecipeHtml(lesson || {});
-
-  if(lesson && lesson.recipeUrl){
-    body.innerHTML += `<a class="recipe-link" href="${lesson.recipeUrl}" target="_blank" rel="noopener">Mở công thức đầy đủ</a>`;
-  }
-
-  toggle.innerHTML = recipeExpanded ? `Thu gọn <span>⌃</span>` : `Xem thêm <span>⌄</span>`;
-}
-
-function renderLessonDetail(){
-  const lesson = currentLessons[currentLessonIndex];
-  if(!lesson) return;
-
-  document.getElementById("detailLessonLabel").innerText = `Bài ${lessonNumber(lesson, currentLessonIndex)}: ${lesson.title || "Bài học"}`;
-  renderDetailVideo(lesson);
-  renderRecipeContent(lesson);
-
-  document.querySelector(".prev-lesson").disabled = currentLessonIndex === 0;
-  document.querySelector(".next-lesson").disabled = currentLessonIndex >= currentLessons.length - 1;
-}
-
 function renderLessons(lessons){
-  const list = document.getElementById("lessonList");
-  list.innerHTML = "";
-
-  if(isMobileView()){
-    const total = lessons.length;
-    const totalPages = Math.max(1, Math.ceil(total / MOBILE_PAGE_SIZE));
-    currentPage = Math.min(currentPage, totalPages - 1);
-    const start = currentPage * MOBILE_PAGE_SIZE;
-    const visibleLessons = lessons.slice(start, start + MOBILE_PAGE_SIZE);
-
-    visibleLessons.forEach((l, offset) => {
-      const index = start + offset;
-      const item = document.createElement("div");
-      item.className = "mobile-lesson-card";
-      item.innerHTML = `
-        <div class="mobile-thumb">
-          <img src="${lessonThumb(l)}" alt="">
-          <button class="mobile-play" type="button" aria-label="Xem bai hoc">▶</button>
+  const list=document.getElementById("lessonList"); list.innerHTML="";
+  const total=lessons.length; const pageCount=Math.max(1,Math.ceil(total/MOBILE_PAGE_SIZE)); if(currentPage>pageCount-1) currentPage=0;
+  const renderSet=isMobile()?lessons.slice(currentPage*MOBILE_PAGE_SIZE,currentPage*MOBILE_PAGE_SIZE+MOBILE_PAGE_SIZE):lessons;
+  renderSet.forEach((l,pageIndex)=>{
+    const index=isMobile()?currentPage*MOBILE_PAGE_SIZE+pageIndex:pageIndex;
+    const item=document.createElement("div");
+    if(isMobile()){
+      item.className="card mobile-course-card";
+      item.innerHTML=`
+        <div class="lesson-thumb-wrap" onclick="openLessonDetail(${index})">
+          <img class="lesson-img" src="${lessonThumb(l)}" alt=""><span class="mobile-play-overlay">▶</span>
         </div>
-        <div class="mobile-lesson-body">
-          <span class="mobile-badge">BÀI ${lessonNumber(l, index)}</span>
-          <h3 class="mobile-lesson-title">${l.title || "Bài học"}</h3>
-          <p class="mobile-lesson-desc">${l.description || ""}</p>
-          <div class="mobile-meta">
-            <span>◷ ${l.duration || ""}</span>
-            <span>▥ ${l.level || "Cơ bản"}</span>
-          </div>
-        </div>
-        <button class="mobile-open-lesson" type="button">▶ XEM BÀI HỌC</button>
-      `;
-
-      item.querySelector(".mobile-thumb").onclick = () => showLessonDetail(index);
-      item.querySelector(".mobile-open-lesson").onclick = () => showLessonDetail(index);
-      list.appendChild(item);
-    });
-
-    list.appendChild(renderMobilePager(total));
-    document.getElementById("lessonCount").innerText = `${formatLessonTotal()} bài học từ cơ bản đến nâng cao`;
-    document.getElementById("statusBox").classList.add("hidden");
-    list.classList.remove("hidden");
-    return;
-  }
-
-  lessons.forEach((l, index) => {
-    const item = document.createElement("div");
-    item.className = "card rounded-xl overflow-hidden grid md:grid-cols-[330px_1fr_260px] items-stretch";
-
-    item.innerHTML = `
-      <div class="relative">
-        <img class="lesson-img w-full h-full" src="${l.thumbnailUrl || "https://images.unsplash.com/photo-1608198093002-ad4e005484ec?q=80&w=900&auto=format&fit=crop"}" alt="">
-        <button class="absolute inset-0 m-auto w-16 h-16 rounded-full bg-black/35 border-2 border-white text-white text-3xl flex items-center justify-center hover:bg-black/50">▶</button>
-      </div>
-
-      <div class="p-5">
-        <div class="flex items-center gap-4">
-          <span class="bg-[#3f7d2d] text-white rounded-md px-3 py-1 font-black text-sm">BÀI ${l.lesson || index + 1}</span>
-          <h3 class="text-2xl font-black">${l.title || "Bài học"}</h3>
-        </div>
-        <p class="mt-3 text-black/70 leading-relaxed">${l.description || ""}</p>
-        <div class="mt-4 flex flex-wrap gap-5 text-sm text-black/70 font-semibold">
-          <span>🕒 ${l.duration || ""}</span>
-          <span>🌿 ${l.level || "Cơ bản"}</span>
-        </div>
-      </div>
-
-      <div class="p-5 flex md:flex-col gap-3 justify-center">
-        <button class="btn-outline rounded-lg px-4 py-3 font-black hover:bg-[#f7fbf3]" data-video="${encodeURIComponent(l.videoUrl || "")}" data-title="${encodeURIComponent(l.title || "")}">
-          ▶ XEM VIDEO
-        </button>
-        <button class="btn-outline rounded-lg px-4 py-3 font-black hover:bg-[#f7fbf3]" data-recipe="${encodeURIComponent(l.recipeUrl || "")}">
-          📄 XEM CÔNG THỨC
-        </button>
-      </div>
-    `;
-
-    item.querySelector("[data-video]").onclick = (e) => {
-      const btn = e.currentTarget;
-      openVideo(decodeURIComponent(btn.dataset.title), decodeURIComponent(btn.dataset.video));
-    };
-
-    item.querySelector("[data-recipe]").onclick = (e) => {
-      openRecipe(decodeURIComponent(e.currentTarget.dataset.recipe));
-    };
-
-    item.querySelector(".absolute").onclick = () => openVideo(l.title, l.videoUrl);
-
+        <div class="lesson-body">
+          <div class="lesson-top"><span class="lesson-badge">BÀI ${l.lesson || index+1}</span><h3 class="lesson-title">${l.title || "Bài học"}</h3></div>
+          <p class="lesson-desc">${l.description || ""}</p>
+          <div class="lesson-meta"><span>◷ ${l.duration || ""}</span><span>▥ ${l.level || "Cơ bản"}</span></div>
+          <button class="mobile-open-btn" onclick="openLessonDetail(${index})">▶ XEM BÀI HỌC</button>
+        </div>`;
+    }else{
+      item.className="card rounded-xl overflow-hidden grid md:grid-cols-[330px_1fr_260px] items-stretch";
+      item.innerHTML=`
+        <div class="relative"><img class="lesson-img w-full h-full" src="${lessonThumb(l)}" alt=""><button class="absolute inset-0 m-auto w-16 h-16 rounded-full bg-black/35 border-2 border-white text-white text-3xl flex items-center justify-center hover:bg-black/50">▶</button></div>
+        <div class="p-5"><div class="flex items-center gap-4"><span class="bg-[#3f7d2d] text-white rounded-md px-3 py-1 font-black text-sm">BÀI ${l.lesson || index+1}</span><h3 class="text-2xl font-black">${l.title || "Bài học"}</h3></div><p class="mt-3 text-black/70 leading-relaxed">${l.description || ""}</p><div class="mt-4 flex flex-wrap gap-5 text-sm text-black/70 font-semibold"><span>🕒 ${l.duration || ""}</span><span>🌿 ${l.level || "Cơ bản"}</span></div></div>
+        <div class="p-5 flex md:flex-col gap-3 justify-center"><button class="btn-outline rounded-lg px-4 py-3 font-black hover:bg-[#f7fbf3]" data-video="${encodeURIComponent(l.videoUrl || "")}" data-title="${encodeURIComponent(l.title || "")}">▶ XEM VIDEO</button><button class="btn-outline rounded-lg px-4 py-3 font-black hover:bg-[#f7fbf3]" data-recipe="${encodeURIComponent(l.recipeUrl || "")}">📄 XEM CÔNG THỨC</button></div>`;
+      item.querySelector("[data-video]").onclick=(e)=>{const btn=e.currentTarget;openVideo(decodeURIComponent(btn.dataset.title),decodeURIComponent(btn.dataset.video));};
+      item.querySelector("[data-recipe]").onclick=(e)=>openRecipe(decodeURIComponent(e.currentTarget.dataset.recipe));
+      item.querySelector(".absolute").onclick=()=>openVideo(l.title,l.videoUrl);
+    }
     list.appendChild(item);
   });
-
-  document.getElementById("lessonCount").innerText = `${lessons.length} bài học từ cơ bản đến nâng cao`;
-  document.getElementById("statusBox").classList.add("hidden");
-  list.classList.remove("hidden");
-}
-
-function renderGoogleButton(){
-  const btn = document.getElementById("googleBtn");
-  if(!btn) return;
-
-  if(typeof google !== "undefined" && google.accounts && google.accounts.id){
-    btn.innerHTML = "";
-    google.accounts.id.renderButton(
-      btn,
-      { theme:"outline", size:"large", text:"signin_with", shape:"pill" }
-    );
+  if(isMobile() && total>MOBILE_PAGE_SIZE){
+    const pager=document.createElement("div"); pager.className="mobile-pager";
+    const dots=Array.from({length:pageCount}).map((_,i)=>`<span class="pager-dot ${i===currentPage?"active":""}" onclick="goLessonPage(${i})"></span>`).join("");
+    pager.innerHTML=`<button class="pager-btn" onclick="changeLessonPage(-1)">‹</button><div class="pager-dots">${dots}</div><button class="pager-btn" onclick="changeLessonPage(1)">›</button>`;
+    list.appendChild(pager);
+    const info=document.createElement("div"); const shown=Math.min(MOBILE_PAGE_SIZE,Math.max(0,total-currentPage*MOBILE_PAGE_SIZE));
+    info.className="pager-info"; info.innerHTML=`Hiển thị <b>${shown}</b> / ${total} bài học`; list.appendChild(info);
   }
+  document.getElementById("lessonCount").innerText=`${lessons.length} bài học từ cơ bản đến nâng cao`;
+  document.getElementById("statusBox").classList.add("hidden"); list.classList.remove("hidden");
 }
-
+function changeLessonPage(delta){const pageCount=Math.max(1,Math.ceil(currentLessons.length/MOBILE_PAGE_SIZE));currentPage=(currentPage+delta+pageCount)%pageCount;renderLessons(currentLessons);}
+function goLessonPage(page){currentPage=page;renderLessons(currentLessons);}
+function renderGoogleButton(){const btn=document.getElementById("googleBtn");if(!btn)return;if(typeof google!=="undefined"&&google.accounts&&google.accounts.id){btn.innerHTML="";google.accounts.id.renderButton(btn,{theme:"outline",size:"large",text:"signin_with",shape:"pill"});}}
 async function loadCourseData(authPayload){
-  const statusBox = document.getElementById("statusBox");
-  statusBox.classList.remove("hidden");
-  statusBox.innerHTML = `<p class="font-black text-xl">Đang kiểm tra quyền học...</p>`;
-
+  const statusBox=document.getElementById("statusBox"); statusBox.classList.remove("hidden"); statusBox.innerHTML=`<p class="font-black text-xl">Đang kiểm tra quyền học...</p>`;
   try{
-    const body = {
-      course: COURSE,
-      ...authPayload
-    };
-
-    const res = await fetch("/api/course-data", {
-      method:"POST",
-      credentials:"same-origin",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify(body)
-    });
-
-    const data = await res.json();
-
+    const body={course:COURSE,...authPayload};
+    const res=await fetch("/api/course-data",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const data=await res.json();
     if(!res.ok || !data.allowed){
-      if(res.status === 401 || res.status === 403){
-        clearSession();
-
-        statusBox.innerHTML = `
-          <p class="font-black text-xl text-[#b65c4b]">Gmail nay chua duoc cap quyen hoc.</p>
-          <p class="mt-2 text-black/60">Vui long dang nhap dung Gmail da mua khoa hoc, hoac lien he admin de duoc cap quyen.</p>
-        `;
-
-        document.getElementById("lessonList").classList.add("hidden");
-        showLoginButton();
-        renderGoogleButton();
-        return;
+      if(res.status===401 || res.status===403){
+        clearSession(); statusBox.innerHTML=`<p class="font-black text-xl text-[#b65c4b]">Gmail này chưa được cấp quyền học.</p><p class="mt-2 text-black/60">Vui lòng đăng nhập đúng Gmail đã mua khóa học, hoặc liên hệ admin để được cấp quyền.</p>`;
+        document.getElementById("lessonList").classList.add("hidden");showLoginButton();renderGoogleButton();return;
       }
-
-      statusBox.innerHTML = `
-        <p class="font-black text-xl text-[#b65c4b]">Khong ket noi duoc he thong.</p>
-        <p class="mt-2 text-black/60">Vui long tai lai trang sau it phut. Phien dang nhap van duoc giu neu chua het han.</p>
-      `;
-      return;
+      statusBox.innerHTML=`<p class="font-black text-xl text-[#b65c4b]">Không kết nối được hệ thống.</p><p class="mt-2 text-black/60">Vui lòng tải lại trang sau ít phút.</p>`;return;
     }
-
-    saveSession(data);
-    showLoggedIn(data.email);
-
-    if(data.courseInfo){
-      if(data.courseInfo.title) document.getElementById("courseTitle").innerHTML = data.courseInfo.title;
-      if(data.courseInfo.subtitle) document.getElementById("courseSubtitle").innerText = data.courseInfo.subtitle;
-      if(data.courseInfo.heroImage) document.getElementById("heroImage").src = data.courseInfo.heroImage;
-    }
-
-    currentLessons = data.lessons || [];
-    renderLessons(currentLessons);
-
-  }catch(err){
-    console.error("Không tải được dữ liệu khóa học:", err);
-
-    statusBox.innerHTML = `
-      <p class="font-black text-xl text-[#b65c4b]">Không kết nối được hệ thống.</p>
-      <p class="mt-2 text-black/60">Kiểm tra lại API, Google Sheet ID và Environment Variables trên Vercel.</p>
-    `;
-  }
+    saveSession(data); showLoggedIn(data.email);
+    if(data.courseInfo){if(data.courseInfo.title) document.getElementById("courseTitle").innerHTML=data.courseInfo.title;if(data.courseInfo.subtitle) document.getElementById("courseSubtitle").innerText=data.courseInfo.subtitle;if(data.courseInfo.heroImage) document.getElementById("heroImage").src=data.courseInfo.heroImage;}
+    currentLessons=data.lessons || []; renderLessons(currentLessons);
+  }catch(err){console.error("Không tải được dữ liệu khóa học:",err);statusBox.innerHTML=`<p class="font-black text-xl text-[#b65c4b]">Không kết nối được hệ thống.</p><p class="mt-2 text-black/60">Kiểm tra lại API, Google Sheet ID và Environment Variables trên Vercel.</p>`;}
 }
-
 async function waitForGoogleLibrary(){
-  if(typeof google !== "undefined" && google.accounts && google.accounts.id){
-    return;
-  }
-
-  await new Promise((resolve, reject) => {
-    let count = 0;
-
-    const interval = setInterval(() => {
-      count++;
-
-      if(typeof google !== "undefined" && google.accounts && google.accounts.id){
-        clearInterval(interval);
-        resolve();
-      }
-
-      if(count > 80){
-        clearInterval(interval);
-        reject(new Error("Google Sign-In library chưa tải xong"));
-      }
-    }, 100);
-  });
+  if(typeof google!=="undefined"&&google.accounts&&google.accounts.id) return;
+  await new Promise((resolve,reject)=>{let count=0;const interval=setInterval(()=>{count++;if(typeof google!=="undefined"&&google.accounts&&google.accounts.id){clearInterval(interval);resolve();}if(count>80){clearInterval(interval);reject(new Error("Google Sign-In library chưa tải xong"));}},100);});
 }
-
-async function getPublicConfig(){
-  try{
-    const res = await fetch("/api/public-config");
-    if(!res.ok) return { googleClientId: "" };
-    return await res.json();
-  }catch(err){
-    console.error("Cannot load Google Sign-In config:", err);
-    return { googleClientId: "" };
-  }
-}
-
+async function getPublicConfig(){try{const res=await fetch("/api/public-config");if(!res.ok)return {googleClientId:""};return await res.json();}catch(err){console.error("Cannot load Google Sign-In config:",err);return {googleClientId:""};}}
 async function setupGoogleSignIn(config){
   if(!config.googleClientId) return false;
-
-  try{
-    await waitForGoogleLibrary();
-
-    google.accounts.id.initialize({
-      client_id: config.googleClientId,
-      callback: (response) => {
-        loadCourseData({
-          credential: response.credential
-        });
-      }
-    });
-
-    return true;
-  }catch(err){
-    console.error("Cannot initialize Google Sign-In:", err);
-    return false;
-  }
+  try{await waitForGoogleLibrary();google.accounts.id.initialize({client_id:config.googleClientId,callback:(response)=>loadCourseData({credential:response.credential})});return true;}catch(err){console.error("Cannot initialize Google Sign-In:",err);return false;}
 }
-
-async function tryRestoreSession(){
-  await loadCourseData({
-    sessionToken: getSavedSession()
-  });
-
-  return Boolean(getSavedSession() || document.getElementById("lessonList").classList.contains("hidden") === false);
-}
-
+async function tryRestoreSession(){await loadCourseData({sessionToken:getSavedSession()});return Boolean(getSavedSession() || document.getElementById("lessonList").classList.contains("hidden")===false);}
 async function initGoogle(){
-  const configPromise = getPublicConfig();
-
-  if(await tryRestoreSession()){
-    return;
-  }
-
-  const config = await configPromise;
-  const googleReady = await setupGoogleSignIn(config);
-
-  if(!getSavedSession()){
-    showLoginButton();
-
-    if(googleReady){
-      renderGoogleButton();
-    }else{
-      document.getElementById("statusBox").innerHTML = `
-        <p class="font-black text-xl text-[#b65c4b]">Chưa cấu hình GOOGLE_CLIENT_ID hoặc lỗi tải Google Login.</p>
-      `;
-    }
-  }
+  const configPromise=getPublicConfig();
+  if(await tryRestoreSession()) return;
+  const config=await configPromise; const googleReady=await setupGoogleSignIn(config);
+  if(!getSavedSession()){showLoginButton(); if(googleReady) renderGoogleButton(); else document.getElementById("statusBox").innerHTML=`<p class="font-black text-xl text-[#b65c4b]">Chưa cấu hình GOOGLE_CLIENT_ID hoặc lỗi tải Google Login.</p>`;}
 }
-
-function logoutGoogle(){
-  clearSession();
-  location.reload();
+function renderRecipeContent(lesson){
+  return `<h3>Nguyên liệu (cho 10 ổ bánh)</h3><ul><li>Bột mì số 13 hoặc bột mì đa dụng: 1000g</li><li>Nước: 650ml</li><li>Men instant: 6g</li><li>Muối: 18g</li><li>Đường: 10g</li><li>Dầu ăn: 20g</li></ul><hr><h3>Các bước thực hiện</h3><h4>1. Trộn bột</h4><p>Cho bột mì, men, đường vào tô trộn đều. Thêm nước từ từ, trộn đến khi bột hòa quyện.</p><h4>2. Nhồi bột</h4><p>Nhồi bột 15–20 phút đến khi bột mịn, đàn hồi tốt, không dính tay.</p><h4>3. Ủ bột lần 1</h4><p>Ủ bột ở nhiệt độ 28–30°C trong 60–90 phút đến khi bột nở gấp đôi.</p><h4>4. Chia bột, tạo hình</h4><p>Chia bột thành 10 phần đều nhau, vê tròn, để nghỉ 15 phút rồi tạo hình.</p><h4>5. Ủ bột lần 2</h4><p>Ủ bột đã tạo hình trong 45–60 phút cho bột nở 1.5–2 lần.</p><h4>6. Rạch bánh và nướng</h4><p>Rạch mặt bánh bằng dao sắc, xịt ẩm rồi nướng đến khi vỏ vàng giòn.</p>${lesson?.recipeUrl ? `<p style="margin-top:18px"><a href="${lesson.recipeUrl}" target="_blank" style="color:#1f5a1a;font-weight:900">Mở công thức gốc</a></p>` : ""}`;
 }
-
-window.addEventListener("resize", () => {
-  if(currentLessons.length){
-    if(!isMobileView() && currentView === "lesson"){
-      showHomeView();
-    }
-    renderLessons(currentLessons);
-  }
-});
-
-window.onload = initGoogle;
+function openLessonDetail(index){
+  if(!isMobile()){const l=currentLessons[index];if(l) openVideo(l.title,l.videoUrl);return;}
+  currentView="lesson"; currentLessonIndex=Math.max(0,Math.min(index,currentLessons.length-1)); const l=currentLessons[currentLessonIndex] || {};
+  document.getElementById("mobileLessonGreenTitle").innerText=`Bài ${l.lesson || currentLessonIndex+1}: ${l.title || "Bài học"}`;
+  document.getElementById("mobileLessonTime").innerText=`02:35 / ${l.duration || "31:45"}`;
+  const recipe=document.getElementById("recipeContent"); recipe.classList.add("collapsed"); recipe.innerHTML=renderRecipeContent(l);
+  document.getElementById("recipeMoreBtn").innerHTML=`Xem thêm <span>⌄</span>`;
+  document.getElementById("mobileLessonVideo").innerHTML=`<img id="mobileLessonThumb" src="${lessonThumb(l)}" alt=""><button class="lesson-big-play" onclick="playCurrentLessonVideo()">▶</button>`;
+  document.body.classList.add("mobile-lesson-active"); window.scrollTo({top:0,behavior:"smooth"});
+}
+function goHomeView(){currentView="home";document.body.classList.remove("mobile-lesson-active");window.scrollTo({top:0,behavior:"smooth"});}
+function playCurrentLessonVideo(){const l=currentLessons[currentLessonIndex]||{};const url=getVideoUrl(l.videoUrl);if(!url)return alert("Bài này chưa có video.");document.getElementById("mobileLessonVideo").innerHTML=`<iframe src="${url}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;}
+function toggleRecipeMore(){const recipe=document.getElementById("recipeContent");const btn=document.getElementById("recipeMoreBtn");recipe.classList.toggle("collapsed");btn.innerHTML=recipe.classList.contains("collapsed")?`Xem thêm <span>⌄</span>`:`Thu gọn <span>⌃</span>`;}
+function openPrevLesson(){openLessonDetail(Math.max(0,currentLessonIndex-1));}
+function openNextLesson(){openLessonDetail(Math.min(currentLessons.length-1,currentLessonIndex+1));}
+window.addEventListener("resize",()=>{if(currentLessons.length&&currentView==="home")renderLessons(currentLessons);if(!isMobile())document.body.classList.remove("mobile-lesson-active");});
+function logoutGoogle(){clearSession();location.reload();}
+window.onload=initGoogle;
 </script>
 </body>
 </html>
