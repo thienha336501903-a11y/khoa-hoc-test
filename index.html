@@ -908,7 +908,7 @@ const SESSION_KEY = `course_session_token_${COURSE}`;
 const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
 const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
 const SESSION_COOKIE = "course_session_token";
-const APP_VERSION = "bunny-secure-embed-mobile-only-2026-06-06";
+const APP_VERSION = "bunny-iframe-cachebust-2026-06-06";
 window.APP_VERSION = APP_VERSION;
 
 let currentLessons = [];
@@ -1442,6 +1442,19 @@ function lessonVideoAuthMessage(lesson){
   return "";
 }
 
+function withBunnyRuntimeCacheBust(url){
+  const text = String(url || "");
+  if(!text.includes("mediadelivery.net/embed/")) return text;
+
+  try{
+    const parsed = new URL(text);
+    parsed.searchParams.set("_cb", String(Date.now()));
+    return parsed.toString();
+  }catch(err){
+    return text + (text.includes("?") ? "&" : "?") + "_cb=" + Date.now();
+  }
+}
+
 function isRealMobileVideoDevice(){
   const ua = navigator.userAgent || navigator.vendor || "";
   const mobileUa = /Android|iPhone|iPad|iPod/i.test(ua);
@@ -1541,9 +1554,10 @@ function renderCustomPlayerHtml(url, options = {}){
   }
 
   if(info.type === "iframe"){
+    const iframeUrl = info.provider === "bunny" ? withBunnyRuntimeCacheBust(info.url) : info.url;
     return `
       <iframe
-        src="${info.url}"
+        src="${iframeUrl}"
         allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
         referrerpolicy="origin"
         allowfullscreen
@@ -1813,9 +1827,10 @@ function renderCustomPlayerHtml(url, options = {}){
   }
 
   if(info.type === "iframe"){
+    const iframeUrl = info.provider === "bunny" ? withBunnyRuntimeCacheBust(info.url) : info.url;
     return `
       <iframe
-        src="${info.url}"
+        src="${iframeUrl}"
         allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
         referrerpolicy="origin"
         allowfullscreen
