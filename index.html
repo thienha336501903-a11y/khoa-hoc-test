@@ -157,7 +157,7 @@ body{
   .lesson-green-title{color:#1f5a1a;font-size:18px;line-height:1.35;font-weight:900;margin-bottom:18px}
   .lesson-video-card{border-radius:14px;overflow:hidden;background:#111;box-shadow:0 12px 26px rgba(0,0,0,.12)}
   .lesson-video-preview{height:196px;position:relative;background:#222}
-  .lesson-video-preview img,.lesson-video-preview iframe{width:100%;height:100%;object-fit:cover;border:0;display:block}
+  .lesson-video-preview img,.lesson-video-preview iframe,.lesson-video-preview video{width:100%;height:100%;object-fit:cover;border:0;display:block;background:#000}
   .lesson-big-play{position:absolute;inset:0;margin:auto;width:78px;height:78px;border:0;border-radius:999px;background:rgba(0,0,0,.38);color:white;font-size:38px;display:flex;align-items:center;justify-content:center}
   .drive-mobile-fallback{position:absolute;left:12px;right:12px;bottom:12px;border:0;border-radius:10px;background:rgba(255,255,255,.92);color:#155216;font-weight:900;font-size:13px;padding:10px 12px;box-shadow:0 8px 18px rgba(0,0,0,.16)}
   .fake-controls{height:54px;display:flex;align-items:center;gap:12px;padding:0 14px;background:linear-gradient(180deg,rgba(0,0,0,.86),#111);color:white}.fake-play,.fake-volume,.fake-full{font-size:24px;flex:0 0 auto}
@@ -708,7 +708,7 @@ const SESSION_KEY = `course_session_token_${COURSE}`;
 const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
 const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
 const SESSION_COOKIE = "course_session_token";
-const APP_VERSION = "mobile-drive-video-fix-2026-06-06";
+const APP_VERSION = "mobile-bunny-inline-video-2026-06-06";
 window.APP_VERSION = APP_VERSION;
 
 let currentLessons = [];
@@ -749,6 +749,48 @@ function getVideoUrl(url){
   match = text.match(/[?&]id=([^&]+)/);
   if(match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
   return text;
+}
+function normalizeBunnyEmbedUrl(url){
+  const text=String(url || "").trim();
+  if(!text.includes("iframe.mediadelivery.net")) return "";
+  return text.replace("/play/","/embed/");
+}
+function getVideoEmbedInfo(url){
+  const preview=getVideoUrl(url);
+  if(!preview) return {type:"empty",url:""};
+
+  if(preview.includes("iframe.mediadelivery.net")){
+    return {type:"iframe",provider:"bunny",url:normalizeBunnyEmbedUrl(preview)};
+  }
+
+  if(
+    preview.includes("bunnycdn.com") ||
+    preview.includes("b-cdn.net") ||
+    preview.endsWith(".m3u8") ||
+    preview.endsWith(".mp4")
+  ){
+    return {type:"video",provider:"bunny",url:preview};
+  }
+
+  if(preview.includes("youtube.com") || preview.includes("youtu.be") || preview.includes("vimeo.com")){
+    return {type:"iframe",provider:"embed",url:preview};
+  }
+
+  if(preview.includes("drive.google.com")){
+    return {type:"drive",provider:"drive",url:preview};
+  }
+
+  return {type:"iframe",provider:"embed",url:preview};
+}
+function renderInlineVideo(url){
+  const info=getVideoEmbedInfo(url);
+  if(info.type==="empty") return "";
+
+  if(info.type==="video"){
+    return `<video src="${info.url}" controls autoplay playsinline webkit-playsinline preload="metadata"></video>`;
+  }
+
+  return `<iframe src="${info.url}" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen webkitallowfullscreen mozallowfullscreen></iframe>`;
 }
 function openVideo(title, url){
   const preview = getVideoUrl(url);
@@ -905,9 +947,9 @@ function renderRecipeContent(lesson){
   return `<h3>Nguyên liệu (cho 10 ổ bánh)</h3><ul><li>Bột mì số 13 hoặc bột mì đa dụng: 1000g</li><li>Nước: 650ml</li><li>Men instant: 6g</li><li>Muối: 18g</li><li>Đường: 10g</li><li>Dầu ăn: 20g</li></ul><hr><h3>Các bước thực hiện</h3><h4>1. Trộn bột</h4><p>Cho bột mì, men, đường vào tô trộn đều. Thêm nước từ từ, trộn đến khi bột hòa quyện.</p><h4>2. Nhồi bột</h4><p>Nhồi bột 15–20 phút đến khi bột mịn, đàn hồi tốt, không dính tay.</p><h4>3. Ủ bột lần 1</h4><p>Ủ bột ở nhiệt độ 28–30°C trong 60–90 phút đến khi bột nở gấp đôi.</p><h4>4. Chia bột, tạo hình</h4><p>Chia bột thành 10 phần đều nhau, vê tròn, để nghỉ 15 phút rồi tạo hình.</p><h4>5. Ủ bột lần 2</h4><p>Ủ bột đã tạo hình trong 45–60 phút cho bột nở 1.5–2 lần.</p><h4>6. Rạch bánh và nướng</h4><p>Rạch mặt bánh bằng dao sắc, xịt ẩm rồi nướng đến khi vỏ vàng giòn.</p>${lesson?.recipeUrl ? `<p style="margin-top:18px"><a href="${lesson.recipeUrl}" target="_blank" style="color:#1f5a1a;font-weight:900">Mở công thức gốc</a></p>` : ""}`;
 }
 function renderMobileVideoPlaceholder(lesson){
-  const url=getVideoUrl(lesson.videoUrl);
-  const driveButton=isDriveVideoUrl(url)?`<button class="drive-mobile-fallback" onclick="playCurrentLessonVideo()">Mo video tren Drive</button>`:"";
-  return `<img id="mobileLessonThumb" src="${lessonThumb(lesson)}" alt=""><button class="lesson-big-play" onclick="playCurrentLessonVideo()">▶</button>${driveButton}`;
+  const info=getVideoEmbedInfo(lesson.videoUrl);
+  const fallbackButton=info.type==="drive"?`<button class="drive-mobile-fallback" onclick="playCurrentLessonVideo()">Link nay la Drive - nen thay bang Bunny</button>`:"";
+  return `<img id="mobileLessonThumb" src="${lessonThumb(lesson)}" alt=""><button class="lesson-big-play" onclick="playCurrentLessonVideo()">▶</button>${fallbackButton}`;
 }
 function openLessonDetail(index){
   if(!isMobile()){const l=currentLessons[index];if(l) openVideo(l.title,l.videoUrl);return;}
@@ -925,15 +967,15 @@ function isDriveVideoUrl(url){return String(url || "").includes("drive.google.co
 function openExternalVideo(url){const opened=window.open(url,"_blank","noopener");if(!opened) window.location.href=url;}
 function playCurrentLessonVideo(){
   const l=currentLessons[currentLessonIndex]||{};
-  const url=getVideoUrl(l.videoUrl);
-  if(!url)return alert("Bai nay chua co video.");
+  const info=getVideoEmbedInfo(l.videoUrl);
+  if(info.type==="empty")return alert("Bai nay chua co video.");
 
-  if(isMobile() && isDriveVideoUrl(url)){
-    openExternalVideo(url);
+  if(info.type==="drive"){
+    openExternalVideo(info.url);
     return;
   }
 
-  document.getElementById("mobileLessonVideo").innerHTML=`<iframe src="${url}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen webkitallowfullscreen mozallowfullscreen playsinline></iframe>`;
+  document.getElementById("mobileLessonVideo").innerHTML=renderInlineVideo(l.videoUrl);
 }
 function toggleRecipeMore(){const recipe=document.getElementById("recipeContent");const btn=document.getElementById("recipeMoreBtn");recipe.classList.toggle("collapsed");btn.innerHTML=recipe.classList.contains("collapsed")?`Xem thêm <span>⌄</span>`:`Thu gọn <span>⌃</span>`;}
 function openPrevLesson(){openLessonDetail(Math.max(0,currentLessonIndex-1));}
