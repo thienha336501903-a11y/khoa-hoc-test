@@ -1319,7 +1319,7 @@ function renderMobileVideoPlaceholder(lesson){
   const card = document.querySelector(".lesson-video-card");
   if(card) card.classList.remove("is-real-player");
 
-  const info = getVideoEmbedInfo(lesson.videoUrl);
+  const info = getVideoEmbedInfo(lessonVideoUrl(lesson));
   const fallbackButton = info.type === "drive"
     ? `<button class="drive-mobile-fallback" onclick="playCurrentLessonVideo()">Link này là Drive - nên thay bằng Bunny</button>`
     : "";
@@ -1340,7 +1340,8 @@ function isDriveVideoUrl(url){return String(url || "").includes("drive.google.co
 function openExternalVideo(url){const opened=window.open(url,"_blank","noopener");if(!opened) window.location.href=url;}
 function playCurrentLessonVideo(){
   const l = currentLessons[currentLessonIndex] || {};
-  const info = getVideoEmbedInfo(l.videoUrl);
+  const videoUrl = lessonVideoUrl(l);
+  const info = getVideoEmbedInfo(videoUrl);
 
   if(info.type === "empty") return alert("Bài này chưa có video.");
 
@@ -1352,7 +1353,7 @@ function playCurrentLessonVideo(){
   const card = document.querySelector(".lesson-video-card");
   if(card) card.classList.add("is-real-player");
 
-  document.getElementById("mobileLessonVideo").innerHTML = renderInlineVideo(l.videoUrl);
+  document.getElementById("mobileLessonVideo").innerHTML = renderInlineVideo(videoUrl);
 }
 function toggleRecipeMore(){const recipe=document.getElementById("recipeContent");const btn=document.getElementById("recipeMoreBtn");recipe.classList.toggle("collapsed");btn.innerHTML=recipe.classList.contains("collapsed")?`Xem thêm <span>⌄</span>`:`Thu gọn <span>⌃</span>`;}
 function openPrevLesson(){openLessonDetail(Math.max(0,currentLessonIndex-1));}
@@ -1691,7 +1692,8 @@ function renderMobileVideoPlaceholder(lesson){
 
 function playCurrentLessonVideo(){
   const l = currentLessons[currentLessonIndex] || {};
-  const info = getCustomVideoInfo(l.videoUrl);
+  const videoUrl = lessonVideoUrl(l);
+  const info = getCustomVideoInfo(videoUrl);
 
   if(info.type === "empty") return alert("Bài này chưa có video.");
 
@@ -1707,14 +1709,14 @@ function playCurrentLessonVideo(){
 
   if(info.type === "hls" || info.type === "file"){
     const playerId = `mobileCoursePlayer_${Date.now()}_${Math.floor(Math.random()*10000)}`;
-    document.getElementById("mobileLessonVideo").innerHTML = renderCustomPlayerHtml(l.videoUrl, {
+    document.getElementById("mobileLessonVideo").innerHTML = renderCustomPlayerHtml(videoUrl, {
       playerId,
       poster: lessonThumb(l),
       autoplay:true
     });
     initCourseVideoPlayer(playerId);
   }else{
-    document.getElementById("mobileLessonVideo").innerHTML = renderCustomPlayerHtml(l.videoUrl, {autoplay:true});
+    document.getElementById("mobileLessonVideo").innerHTML = renderCustomPlayerHtml(videoUrl, {autoplay:true});
   }
 }
 
