@@ -4,6 +4,7 @@ import crypto from "crypto";
 
 const SESSION_DAYS = Number(process.env.SESSION_DAYS || 30);
 const SESSION_COOKIE = "course_session_token";
+const API_VERSION = "recipe-drive-diagnostics-2026-06-06";
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -201,6 +202,10 @@ function getGoogleDriveFileId(url) {
   return match ? match[1] : "";
 }
 
+function publicServiceEmail() {
+  return String(process.env.GOOGLE_CLIENT_EMAIL || "").trim();
+}
+
 function recipeTextUrl(recipeUrl) {
   const url = String(recipeUrl || "").trim();
   if (!url) return "";
@@ -285,7 +290,7 @@ async function fetchRecipeTextFromGoogleApi(recipeUrl) {
   const drive = await getDriveClient();
   let metadata = await drive.files.get({
     fileId,
-    fields: "id,name,mimeType,exportLinks,shortcutDetails",
+    fields: "id,name,mimeType,exportLinks,shortcutDetails,capabilities,copyRequiresWriterPermission,webViewLink,webContentLink",
     supportsAllDrives: true
   });
 
@@ -293,12 +298,14 @@ async function fetchRecipeTextFromGoogleApi(recipeUrl) {
     fileId = metadata.data.shortcutDetails.targetId;
     metadata = await drive.files.get({
       fileId,
-      fields: "id,name,mimeType,exportLinks,shortcutDetails",
+      fields: "id,name,mimeType,exportLinks,shortcutDetails,capabilities,copyRequiresWriterPermission,webViewLink,webContentLink",
       supportsAllDrives: true
     });
   }
 
   const mimeType = metadata.data.mimeType || "";
+  const name = metadata.data.name || "";
+  const canDownload = metadata.data.capabilities?.canDownload;
 
   if (mimeType.startsWith("application/vnd.google-apps.")) {
     try {
@@ -330,19 +337,31 @@ async function fetchRecipeTextFromGoogleApi(recipeUrl) {
     return googleDocBodyToText(result.data);
   }
 
-  const result = await drive.files.get(
-    {
-      fileId,
-      alt: "media",
-      supportsAllDrives: true,
-      acknowledgeAbuse: true
-    },
-    {
-      responseType: "arraybuffer"
-    }
-  );
+  if (canDownload === false) {
+    throw new Error(
+      `Drive blocks download for this file. fileId=${fileId}; name=${name}; mimeType=${mimeType}; serviceEmail=${publicServiceEmail()}; canDownload=false. Convert the recipe file to Google Docs or enable download permission for this service account.`
+    );
+  }
 
-  return Buffer.from(result.data || "").toString("utf8").trim();
+  try {
+    const result = await drive.files.get(
+      {
+        fileId,
+        alt: "media",
+        supportsAllDrives: true,
+        acknowledgeAbuse: true
+      },
+      {
+        responseType: "arraybuffer"
+      }
+    );
+
+    return Buffer.from(result.data || "").toString("utf8").trim();
+  } catch (err) {
+    throw new Error(
+      `${err.message}; fileId=${fileId}; name=${name}; mimeType=${mimeType}; serviceEmail=${publicServiceEmail()}; canDownload=${String(canDownload)}`
+    );
+  }
 }
 
 async function fetchRecipeTextFromPublicUrl(recipeUrl) {
@@ -556,6 +575,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       allowed: true,
+      apiVersion: API_VERSION,
       email,
       course: courseSlug,
       courseInfo,
