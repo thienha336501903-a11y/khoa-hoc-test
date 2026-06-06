@@ -252,32 +252,76 @@ function googleDocBodyToText(document) {
   return lines.join("\n").trim();
 }
 
+function htmlToPlainText(html) {
+  const text = String(html || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n\s+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+
+  if (/^google drive|^sign in|quota exceeded|virus scan/i.test(text)) {
+    return "";
+  }
+
+  return text;
+}
+
 async function fetchRecipeTextFromGoogleApi(recipeUrl) {
   const docId = getGoogleDocId(recipeUrl);
-  const fileId = docId || getGoogleDriveFileId(recipeUrl);
+  let fileId = docId || getGoogleDriveFileId(recipeUrl);
   if (!fileId) return "";
 
   const drive = await getDriveClient();
-  const metadata = await drive.files.get({
+  let metadata = await drive.files.get({
     fileId,
-    fields: "id,name,mimeType,exportLinks",
+    fields: "id,name,mimeType,exportLinks,shortcutDetails",
     supportsAllDrives: true
   });
 
+  if (metadata.data.mimeType === "application/vnd.google-apps.shortcut" && metadata.data.shortcutDetails?.targetId) {
+    fileId = metadata.data.shortcutDetails.targetId;
+    metadata = await drive.files.get({
+      fileId,
+      fields: "id,name,mimeType,exportLinks,shortcutDetails",
+      supportsAllDrives: true
+    });
+  }
+
   const mimeType = metadata.data.mimeType || "";
 
-  if (mimeType === "application/vnd.google-apps.document") {
-    const result = await drive.files.export(
-      {
-        fileId,
-        mimeType: "text/plain"
-      },
-      {
-        responseType: "text"
-      }
-    );
+  if (mimeType.startsWith("application/vnd.google-apps.")) {
+    try {
+      const result = await drive.files.export(
+        {
+          fileId,
+          mimeType: "text/plain"
+        },
+        {
+          responseType: "text"
+        }
+      );
 
-    return String(result.data || "").trim();
+      return String(result.data || "").trim();
+    } catch (err) {
+      if (mimeType === "application/vnd.google-apps.document") {
+        const docs = await getDocsClient();
+        const result = await docs.documents.get({ documentId: fileId });
+        return googleDocBodyToText(result.data);
+      }
+
+      throw err;
+    }
   }
 
   if (docId) {
@@ -294,11 +338,11 @@ async function fetchRecipeTextFromGoogleApi(recipeUrl) {
       acknowledgeAbuse: true
     },
     {
-      responseType: "text"
+      responseType: "arraybuffer"
     }
   );
 
-  return String(result.data || "").trim();
+  return Buffer.from(result.data || "").toString("utf8").trim();
 }
 
 async function fetchRecipeTextFromPublicUrl(recipeUrl) {
@@ -324,6 +368,8 @@ async function fetchRecipeTextFromPublicUrl(recipeUrl) {
       const text = await response.text();
 
       if (contentType.includes("text/html") && /<html[\s>]/i.test(text)) {
+        const plainText = htmlToPlainText(text);
+        if (plainText) return plainText;
         throw new Error("Recipe URL returned HTML instead of plain text");
       }
 
