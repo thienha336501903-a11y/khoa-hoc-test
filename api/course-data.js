@@ -169,6 +169,81 @@ async function readSheetRange(sheets, spreadsheetId, range) {
   return result.data.values || [];
 }
 
+function getGoogleDocId(url) {
+  const text = String(url || "");
+  const match = text.match(/docs\.google\.com\/document\/d\/([^/]+)/);
+  return match ? match[1] : "";
+}
+
+function getGoogleDriveFileId(url) {
+  const text = String(url || "");
+  let match = text.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (match) return match[1];
+
+  match = text.match(/[?&]id=([^&]+)/);
+  return match ? match[1] : "";
+}
+
+function recipeTextUrl(recipeUrl) {
+  const url = String(recipeUrl || "").trim();
+  if (!url) return "";
+
+  const docId = getGoogleDocId(url);
+  if (docId) {
+    return `https://docs.google.com/document/d/${docId}/export?format=txt`;
+  }
+
+  const fileId = getGoogleDriveFileId(url);
+  if (fileId) {
+    return `https://drive.google.com/uc?export=download&id=${fileId}`;
+  }
+
+  return url;
+}
+
+async function fetchRecipeText(recipeUrl) {
+  const url = recipeTextUrl(recipeUrl);
+  if (!url) return "";
+
+  const response = await fetch(url, {
+    redirect: "follow",
+    headers: {
+      "User-Agent": "Mozilla/5.0"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Recipe fetch failed: ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+
+  if (contentType.includes("text/html") && /<html[\s>]/i.test(text)) {
+    throw new Error("Recipe URL returned HTML instead of plain text");
+  }
+
+  return text.trim();
+}
+
+async function attachRecipeText(lesson) {
+  if (!lesson.recipeUrl) return lesson;
+
+  try {
+    const recipeText = await fetchRecipeText(lesson.recipeUrl);
+    return {
+      ...lesson,
+      recipeText
+    };
+  } catch (err) {
+    return {
+      ...lesson,
+      recipeText: "",
+      recipeTextError: err.message
+    };
+  }
+}
+
 async function getEmailFromGoogleCredential(credential) {
   const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -286,6 +361,8 @@ export default async function handler(req, res) {
         .map(row => rowToObject(lessonHeaders, row))
         .filter(l => String(l.course || "").trim() === courseSlug)
         .sort((a, b) => Number(a.lesson || 0) - Number(b.lesson || 0));
+
+      lessons = await Promise.all(lessons.map(attachRecipeText));
     }
 
     let courseInfo = {};
