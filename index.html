@@ -788,6 +788,73 @@ body{
   object-fit:contain!important;
 }
 
+
+
+/* ===== VIDEO PROTECTION: MOBILE ONLY + YOUTUBE EMBED HARDENING ===== */
+.video-disabled-message{
+  width:100%;
+  min-height:220px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:24px;
+  border-radius:16px;
+  background:linear-gradient(135deg,#fff7ef,#ffffff);
+  border:1px solid rgba(47,95,35,.16);
+  color:#24571c;
+  font-family:"Be Vietnam Pro",system-ui,sans-serif;
+}
+.video-disabled-message h3{font-size:22px;font-weight:900;margin:0 0 8px;color:#1f5a1a}
+.video-disabled-message p{font-size:15px;line-height:1.55;margin:0;color:rgba(0,0,0,.68);font-weight:700}
+.protected-video-wrap{
+  position:relative;
+  width:100%;
+  height:100%;
+  background:#000;
+  overflow:hidden;
+  border-radius:inherit;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
+.protected-video-wrap iframe{
+  width:100%!important;
+  height:100%!important;
+  border:0!important;
+  display:block!important;
+  background:#000!important;
+}
+.video-click-guard{
+  position:absolute;
+  inset:0;
+  z-index:4;
+  pointer-events:auto;
+  background:transparent;
+}
+.protected-video-wrap.allow-controls .video-click-guard{
+  pointer-events:none;
+}
+.video-open-blocker{
+  position:absolute;
+  right:0;
+  top:0;
+  width:38%;
+  height:24%;
+  z-index:5;
+  background:transparent;
+}
+.video-watermark-mask{
+  position:absolute;
+  right:0;
+  bottom:0;
+  width:116px;
+  height:44px;
+  z-index:5;
+  background:linear-gradient(135deg,rgba(0,0,0,.0),rgba(0,0,0,.35));
+  pointer-events:none;
+}
+
 </style>
 </head>
 
@@ -908,7 +975,7 @@ const SESSION_KEY = `course_session_token_${COURSE}`;
 const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
 const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
 const SESSION_COOKIE = "course_session_token";
-const APP_VERSION = "mobile-player-youtube-thumbnail-2026-06-06";
+const APP_VERSION = "mobile-only-video-youtube-protection-2026-06-06";
 window.APP_VERSION = APP_VERSION;
 
 let currentLessons = [];
@@ -1005,7 +1072,7 @@ function isYouTubeUrl(input){
 function normalizeYouTubeEmbedUrl(input){
   const id = getYouTubeVideoId(input);
   if(!id) return "";
-  return `https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+  return `https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&modestbranding=1&playsinline=1&controls=1&disablekb=1&fs=1&iv_load_policy=3`;
 }
 
 function getVideoUrl(url){
@@ -1432,6 +1499,70 @@ function getCustomVideoInfo(url){
   return {type:"iframe", provider:"embed", url:clean};
 }
 
+
+function isMobileVideoDevice(){
+  const ua = navigator.userAgent || navigator.vendor || window.opera || "";
+  const isPhoneOrTablet = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(ua);
+  const hasTouch = (navigator.maxTouchPoints || 0) > 0;
+  return isPhoneOrTablet && hasTouch;
+}
+
+function renderPcVideoBlockedMessage(){
+  return `
+    <div class="video-disabled-message">
+      <div>
+        <h3>Video chỉ xem được trên điện thoại.</h3>
+        <p>Bạn vẫn có thể xem công thức trên máy tính.<br>Vui lòng mở bài học bằng điện thoại để xem video.</p>
+      </div>
+    </div>
+  `;
+}
+
+function isYoutubeProviderInfo(info){
+  return info && info.provider === "youtube";
+}
+
+function renderProtectedIframe(info){
+  const isYoutube = isYoutubeProviderInfo(info);
+  const sandbox = isYoutube
+    ? `sandbox="allow-scripts allow-same-origin allow-presentation"`
+    : "";
+  const referrer = isYoutube ? `referrerpolicy="strict-origin-when-cross-origin"` : "";
+
+  return `
+    <div class="protected-video-wrap ${isYoutube ? "youtube-protected" : "allow-controls"}" oncontextmenu="return false">
+      <iframe
+        src="${info.url}"
+        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowfullscreen
+        webkitallowfullscreen
+        mozallowfullscreen
+        loading="lazy"
+        ${sandbox}
+        ${referrer}>
+      </iframe>
+      ${isYoutube ? `<div class="video-open-blocker" title=""></div><div class="video-watermark-mask"></div>` : ""}
+    </div>
+  `;
+}
+
+function installVideoProtectionEvents(){
+  document.addEventListener("contextmenu", function(event){
+    if(event.target && event.target.closest && event.target.closest(".lesson-video-card,.video-frame,.protected-video-wrap")){
+      event.preventDefault();
+      return false;
+    }
+  }, {capture:true});
+
+  document.addEventListener("auxclick", function(event){
+    if(event.target && event.target.closest && event.target.closest(".lesson-video-card,.video-frame,.protected-video-wrap")){
+      event.preventDefault();
+      return false;
+    }
+  }, {capture:true});
+}
+installVideoProtectionEvents();
+
 function renderCustomPlayerHtml(url, options = {}){
   const info = getCustomVideoInfo(url);
   const playerId = options.playerId || `coursePlayer_${Date.now()}_${Math.floor(Math.random()*10000)}`;
@@ -1459,16 +1590,7 @@ function renderCustomPlayerHtml(url, options = {}){
   }
 
   if(info.type === "iframe"){
-    return `
-      <iframe
-        src="${info.url}"
-        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
-        allowfullscreen
-        webkitallowfullscreen
-        mozallowfullscreen
-        loading="lazy">
-      </iframe>
-    `;
+    return renderProtectedIframe(info);
   }
 
   return "";
@@ -1565,6 +1687,14 @@ function openVideo(title, url){
 
   if(info.type === "empty") return alert("Bài này chưa có video.");
 
+  if(!isMobileVideoDevice()){
+    destroyCoursePlayers();
+    document.getElementById("modalTitle").innerText = title || "Video bài học";
+    document.querySelector(".video-frame").innerHTML = renderPcVideoBlockedMessage();
+    document.getElementById("videoModal").classList.add("show");
+    return;
+  }
+
   if(info.type === "drive"){
     window.open(info.url, "_blank", "noopener");
     return;
@@ -1613,6 +1743,13 @@ function playCurrentLessonVideo(){
   const info = getCustomVideoInfo(l.videoUrl);
 
   if(info.type === "empty") return alert("Bài này chưa có video.");
+
+  if(!isMobileVideoDevice()){
+    const card = document.querySelector(".lesson-video-card");
+    if(card) card.classList.remove("is-real-player");
+    document.getElementById("mobileLessonVideo").innerHTML = renderPcVideoBlockedMessage();
+    return;
+  }
 
   if(info.type === "drive"){
     openExternalVideo(info.url);
@@ -1748,6 +1885,7 @@ function renderCustomPlayerHtml(url, options = {}){
 function renderInlineVideo(url){
   const info = getCustomVideoInfo(url);
 
+  if(!isMobileVideoDevice()) return renderPcVideoBlockedMessage();
   if(info.type === "empty") return "";
   if(info.type === "drive") return "";
 
