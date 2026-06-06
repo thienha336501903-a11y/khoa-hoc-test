@@ -585,6 +585,34 @@ body{
   }
 }
 
+
+/* ===== FIX BUNNY PLAYER: HIDE FAKE CONTROLS WHEN REAL PLAYER RUNS ===== */
+@media(max-width:768px){
+  .lesson-video-card.is-real-player .fake-controls{
+    display:none!important;
+  }
+
+  .lesson-video-card.is-real-player .lesson-video-preview{
+    width:100%!important;
+    height:auto!important;
+    aspect-ratio:16/9!important;
+    background:#000!important;
+  }
+
+  .lesson-video-card.is-real-player .lesson-video-preview iframe,
+  .lesson-video-card.is-real-player .lesson-video-preview video{
+    width:100%!important;
+    height:100%!important;
+    border:0!important;
+    display:block!important;
+    background:#000!important;
+  }
+
+  .lesson-video-card.is-real-player{
+    background:#000!important;
+  }
+}
+
 </style>
 </head>
 
@@ -708,7 +736,7 @@ const SESSION_KEY = `course_session_token_${COURSE}`;
 const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
 const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
 const SESSION_COOKIE = "course_session_token";
-const APP_VERSION = "mobile-bunny-inline-video-2026-06-06";
+const APP_VERSION = "bunny-hide-fake-controls-2026-06-06";
 window.APP_VERSION = APP_VERSION;
 
 let currentLessons = [];
@@ -739,67 +767,127 @@ function clearSessionCookie(){document.cookie = `${SESSION_COOKIE}=; path=/; max
 function scrollToLessons(){document.getElementById("lessons").scrollIntoView({behavior:"smooth"});}
 function isMobile(){return window.matchMedia("(max-width: 768px)").matches;}
 function lessonThumb(l){return l.thumbnailUrl || "https://images.unsplash.com/photo-1608198093002-ad4e005484ec?q=80&w=900&auto=format&fit=crop";}
-function getVideoUrl(url){
-  if(!url) return "";
-  const text = String(url).trim();
-  if(text.includes("iframe.mediadelivery.net") || text.includes("bunnycdn.com") || text.includes("youtube.com") || text.includes("youtu.be") || text.includes("vimeo.com")) return text;
-  if(text.includes("/preview")) return text;
-  let match = text.match(/\/file\/d\/([^/]+)/);
-  if(match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
-  match = text.match(/[?&]id=([^&]+)/);
-  if(match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
+function extractIframeSrc(input){
+  const text = String(input || "").trim();
+  const match = text.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+  return match && match[1] ? match[1].trim() : text;
+}
+
+function normalizeBunnyEmbedUrl(url){
+  let text = extractIframeSrc(url).replace(/&amp;/g, "&").trim();
+
+  if(!text) return "";
+
+  // Bunny Direct Play URL:
+  // https://iframe.mediadelivery.net/play/LIBRARY_ID/VIDEO_ID
+  // đổi thành Embed URL để nhúng web ổn định hơn
+  text = text.replace("https://iframe.mediadelivery.net/play/", "https://iframe.mediadelivery.net/embed/");
+  text = text.replace("https://video.bunnycdn.com/play/", "https://iframe.mediadelivery.net/embed/");
+
   return text;
 }
-function normalizeBunnyEmbedUrl(url){
-  const text=String(url || "").trim();
-  if(!text.includes("iframe.mediadelivery.net")) return "";
-  return text.replace("/play/","/embed/");
-}
-function getVideoEmbedInfo(url){
-  const preview=getVideoUrl(url);
-  if(!preview) return {type:"empty",url:""};
 
-  if(preview.includes("iframe.mediadelivery.net")){
-    return {type:"iframe",provider:"bunny",url:normalizeBunnyEmbedUrl(preview)};
+function isBunnyUrl(url){
+  const text = String(url || "");
+  return text.includes("iframe.mediadelivery.net") || text.includes("video.bunnycdn.com") || text.includes("bunnycdn.com") || text.includes("b-cdn.net");
+}
+
+function isDirectVideoFile(url){
+  return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(url || ""));
+}
+
+function getVideoUrl(url){
+  if(!url) return "";
+  let text = normalizeBunnyEmbedUrl(url);
+
+  if(isBunnyUrl(text)) return text;
+
+  if(isDirectVideoFile(text)) return text;
+
+  if(text.includes("youtube.com") || text.includes("youtu.be") || text.includes("vimeo.com")) return text;
+
+  if(text.includes("/preview")) return text;
+
+  let match = text.match(/\/file\/d\/([^/]+)/);
+  if(match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
+
+  match = text.match(/[?&]id=([^&]+)/);
+  if(match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
+
+  return text;
+}
+
+function getVideoEmbedInfo(url){
+  const preview = getVideoUrl(url);
+  if(!preview) return {type:"empty", url:""};
+
+  if(isDirectVideoFile(preview)){
+    return {type:"video", provider:"file", url:preview};
   }
 
-  if(
-    preview.includes("bunnycdn.com") ||
-    preview.includes("b-cdn.net") ||
-    preview.endsWith(".m3u8") ||
-    preview.endsWith(".mp4")
-  ){
-    return {type:"video",provider:"bunny",url:preview};
+  if(isBunnyUrl(preview)){
+    return {type:"iframe", provider:"bunny", url:preview};
   }
 
   if(preview.includes("youtube.com") || preview.includes("youtu.be") || preview.includes("vimeo.com")){
-    return {type:"iframe",provider:"embed",url:preview};
+    return {type:"iframe", provider:"embed", url:preview};
   }
 
   if(preview.includes("drive.google.com")){
-    return {type:"drive",provider:"drive",url:preview};
+    return {type:"drive", provider:"drive", url:preview};
   }
 
-  return {type:"iframe",provider:"embed",url:preview};
+  return {type:"iframe", provider:"embed", url:preview};
 }
-function renderInlineVideo(url){
-  const info=getVideoEmbedInfo(url);
-  if(info.type==="empty") return "";
 
-  if(info.type==="video"){
-    return `<video src="${info.url}" controls autoplay playsinline webkit-playsinline preload="metadata"></video>`;
+function renderInlineVideo(url){
+  const info = getVideoEmbedInfo(url);
+  if(info.type === "empty") return "";
+
+  if(info.type === "video"){
+    return `
+      <video
+        src="${info.url}"
+        controls
+        autoplay
+        playsinline
+        webkit-playsinline
+        preload="metadata">
+      </video>
+    `;
   }
 
-  return `<iframe src="${info.url}" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen webkitallowfullscreen mozallowfullscreen></iframe>`;
+  return `
+    <iframe
+      src="${info.url}"
+      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+      allowfullscreen
+      webkitallowfullscreen
+      mozallowfullscreen
+      loading="lazy">
+    </iframe>
+  `;
 }
 function openVideo(title, url){
-  const preview = getVideoUrl(url);
-  if(!preview) return alert("Bài này chưa có video.");
+  const info = getVideoEmbedInfo(url);
+  if(info.type === "empty") return alert("Bài này chưa có video.");
+
+  if(info.type === "drive"){
+    window.open(info.url, "_blank", "noopener");
+    return;
+  }
+
   document.getElementById("modalTitle").innerText = title || "Video bài học";
-  document.getElementById("videoFrame").src = preview;
+  document.querySelector(".video-frame").innerHTML = renderInlineVideo(url);
   document.getElementById("videoModal").classList.add("show");
 }
-function closeVideo(){document.getElementById("videoFrame").src="";document.getElementById("videoModal").classList.remove("show");}
+function closeVideo(){
+  const frame = document.querySelector(".video-frame");
+  if(frame){
+    frame.innerHTML = `<iframe id="videoFrame" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+  document.getElementById("videoModal").classList.remove("show");
+}
 function openRecipe(url){if(!url) return alert("Bài này chưa có công thức.");window.open(url,"_blank");}
 function clearSession(){
   try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(SESSION_EMAIL_KEY);localStorage.removeItem(SESSION_EXP_KEY);}catch(err){console.warn("Cannot clear login session:",err);}
@@ -947,8 +1035,14 @@ function renderRecipeContent(lesson){
   return `<h3>Nguyên liệu (cho 10 ổ bánh)</h3><ul><li>Bột mì số 13 hoặc bột mì đa dụng: 1000g</li><li>Nước: 650ml</li><li>Men instant: 6g</li><li>Muối: 18g</li><li>Đường: 10g</li><li>Dầu ăn: 20g</li></ul><hr><h3>Các bước thực hiện</h3><h4>1. Trộn bột</h4><p>Cho bột mì, men, đường vào tô trộn đều. Thêm nước từ từ, trộn đến khi bột hòa quyện.</p><h4>2. Nhồi bột</h4><p>Nhồi bột 15–20 phút đến khi bột mịn, đàn hồi tốt, không dính tay.</p><h4>3. Ủ bột lần 1</h4><p>Ủ bột ở nhiệt độ 28–30°C trong 60–90 phút đến khi bột nở gấp đôi.</p><h4>4. Chia bột, tạo hình</h4><p>Chia bột thành 10 phần đều nhau, vê tròn, để nghỉ 15 phút rồi tạo hình.</p><h4>5. Ủ bột lần 2</h4><p>Ủ bột đã tạo hình trong 45–60 phút cho bột nở 1.5–2 lần.</p><h4>6. Rạch bánh và nướng</h4><p>Rạch mặt bánh bằng dao sắc, xịt ẩm rồi nướng đến khi vỏ vàng giòn.</p>${lesson?.recipeUrl ? `<p style="margin-top:18px"><a href="${lesson.recipeUrl}" target="_blank" style="color:#1f5a1a;font-weight:900">Mở công thức gốc</a></p>` : ""}`;
 }
 function renderMobileVideoPlaceholder(lesson){
-  const info=getVideoEmbedInfo(lesson.videoUrl);
-  const fallbackButton=info.type==="drive"?`<button class="drive-mobile-fallback" onclick="playCurrentLessonVideo()">Link nay la Drive - nen thay bang Bunny</button>`:"";
+  const card = document.querySelector(".lesson-video-card");
+  if(card) card.classList.remove("is-real-player");
+
+  const info = getVideoEmbedInfo(lesson.videoUrl);
+  const fallbackButton = info.type === "drive"
+    ? `<button class="drive-mobile-fallback" onclick="playCurrentLessonVideo()">Link này là Drive - nên thay bằng Bunny</button>`
+    : "";
+
   return `<img id="mobileLessonThumb" src="${lessonThumb(lesson)}" alt=""><button class="lesson-big-play" onclick="playCurrentLessonVideo()">▶</button>${fallbackButton}`;
 }
 function openLessonDetail(index){
@@ -966,16 +1060,20 @@ function goHomeView(){currentView="home";document.body.classList.remove("mobile-
 function isDriveVideoUrl(url){return String(url || "").includes("drive.google.com");}
 function openExternalVideo(url){const opened=window.open(url,"_blank","noopener");if(!opened) window.location.href=url;}
 function playCurrentLessonVideo(){
-  const l=currentLessons[currentLessonIndex]||{};
-  const info=getVideoEmbedInfo(l.videoUrl);
-  if(info.type==="empty")return alert("Bai nay chua co video.");
+  const l = currentLessons[currentLessonIndex] || {};
+  const info = getVideoEmbedInfo(l.videoUrl);
 
-  if(info.type==="drive"){
+  if(info.type === "empty") return alert("Bài này chưa có video.");
+
+  if(info.type === "drive"){
     openExternalVideo(info.url);
     return;
   }
 
-  document.getElementById("mobileLessonVideo").innerHTML=renderInlineVideo(l.videoUrl);
+  const card = document.querySelector(".lesson-video-card");
+  if(card) card.classList.add("is-real-player");
+
+  document.getElementById("mobileLessonVideo").innerHTML = renderInlineVideo(l.videoUrl);
 }
 function toggleRecipeMore(){const recipe=document.getElementById("recipeContent");const btn=document.getElementById("recipeMoreBtn");recipe.classList.toggle("collapsed");btn.innerHTML=recipe.classList.contains("collapsed")?`Xem thêm <span>⌄</span>`:`Thu gọn <span>⌃</span>`;}
 function openPrevLesson(){openLessonDetail(Math.max(0,currentLessonIndex-1));}
