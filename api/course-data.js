@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 const SESSION_DAYS = Number(process.env.SESSION_DAYS || 30);
 const SESSION_COOKIE = "course_session_token";
-const API_VERSION = "recipe-drive-diagnostics-2026-06-06";
+const API_VERSION = "bunny-secure-embed-2026-06-06";
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -204,6 +204,81 @@ function getGoogleDriveFileId(url) {
 
 function publicServiceEmail() {
   return String(process.env.GOOGLE_CLIENT_EMAIL || "").trim();
+}
+
+function extractIframeSrc(input) {
+  const text = String(input || "").trim();
+  const match = text.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+  return match?.[1] ? match[1].trim() : text;
+}
+
+function normalizeBunnyEmbedUrl(input) {
+  let text = extractIframeSrc(input).replace(/&amp;/g, "&").trim();
+  if (!text) return "";
+
+  try {
+    const url = new URL(text);
+    const host = url.hostname.replace(/^www\./, "");
+
+    if (
+      host !== "player.mediadelivery.net" &&
+      host !== "iframe.mediadelivery.net" &&
+      host !== "video.bunnycdn.com"
+    ) {
+      return "";
+    }
+
+    const parts = url.pathname.split("/").filter(Boolean);
+    const mode = parts[0];
+    const libraryId = parts[1];
+    const videoId = parts[2];
+
+    if ((mode !== "embed" && mode !== "play") || !libraryId || !videoId) {
+      return "";
+    }
+
+    return `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
+  } catch (err) {
+    return "";
+  }
+}
+
+function getBunnyEmbedParts(input) {
+  const normalized = normalizeBunnyEmbedUrl(input);
+  if (!normalized) return null;
+
+  const match = normalized.match(/iframe\.mediadelivery\.net\/embed\/([^/]+)\/([^/?#]+)/);
+  if (!match) return null;
+
+  return {
+    libraryId: match[1],
+    videoId: match[2],
+    normalizedUrl: normalized
+  };
+}
+
+function signBunnyEmbedUrl(videoUrl) {
+  const parts = getBunnyEmbedParts(videoUrl);
+  if (!parts) return videoUrl || "";
+
+  const tokenKey = String(process.env.BUNNY_STREAM_TOKEN_KEY || "").trim();
+  if (!tokenKey) return parts.normalizedUrl;
+
+  const expires = Math.floor(Date.now() / 1000) + 600;
+  const token = crypto
+    .createHash("sha256")
+    .update(`${tokenKey}${parts.videoId}${expires}`)
+    .digest("hex");
+
+  return `${parts.normalizedUrl}?token=${token}&expires=${expires}`;
+}
+
+function attachSecureVideoUrl(lesson) {
+  const videoUrl = lesson.videoUrl || "";
+  return {
+    ...lesson,
+    secureVideoUrl: signBunnyEmbedUrl(videoUrl)
+  };
 }
 
 function recipeTextUrl(recipeUrl) {
@@ -550,7 +625,8 @@ export default async function handler(req, res) {
         .slice(1)
         .map(row => rowToObject(lessonHeaders, row))
         .filter(l => String(l.course || "").trim() === courseSlug)
-        .sort((a, b) => Number(a.lesson || 0) - Number(b.lesson || 0));
+        .sort((a, b) => Number(a.lesson || 0) - Number(b.lesson || 0))
+        .map(attachSecureVideoUrl);
 
       lessons = await Promise.all(lessons.map(attachRecipeText));
     }
