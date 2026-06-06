@@ -654,6 +654,25 @@ body{
   display:block;
 }
 
+.video-frame,
+.lesson-video-card.is-real-player .lesson-video-preview{
+  aspect-ratio:var(--course-video-ratio, 16 / 9)!important;
+  min-height:220px;
+}
+
+.video-frame .course-player-shell,
+.video-frame .video-js,
+.lesson-video-card.is-real-player .lesson-video-preview .course-player-shell,
+.lesson-video-card.is-real-player .lesson-video-preview .video-js{
+  width:100%!important;
+  height:100%!important;
+}
+
+.video-js.vjs-course-player video,
+.video-js.vjs-course-player .vjs-tech{
+  object-fit:contain!important;
+}
+
 .video-js.vjs-course-player .vjs-big-play-button{
   width:78px;
   height:78px;
@@ -747,6 +766,26 @@ body{
   .video-js.vjs-course-player .vjs-time-control{
     font-size:12px;
   }
+}
+
+/* Final player sizing override: keep full video visible and prevent iPhone collapse. */
+.video-frame,
+.lesson-video-card.is-real-player .lesson-video-preview{
+  aspect-ratio:var(--course-video-ratio, 16 / 9)!important;
+  min-height:220px!important;
+}
+
+.course-player-shell,
+.video-frame .video-js,
+.lesson-video-card.is-real-player .lesson-video-preview .video-js{
+  width:100%!important;
+  height:100%!important;
+}
+
+.video-js.vjs-course-player video,
+.video-js.vjs-course-player .vjs-tech,
+.lesson-video-preview video{
+  object-fit:contain!important;
 }
 
 </style>
@@ -1333,7 +1372,7 @@ function clampVideoRatio(ratio){
 }
 
 function getPlayerAspectTarget(player){
-  return player.el().closest(".lesson-video-card, .video-frame, .lesson-video-preview");
+  return player.el().closest(".lesson-video-preview") || player.el().closest(".video-frame");
 }
 
 function updatePlayerAspectRatio(player){
@@ -1347,7 +1386,7 @@ function updatePlayerAspectRatio(player){
   const target = getPlayerAspectTarget(player);
 
   if(target){
-    target.style.aspectRatio = `${clampedRatio}`;
+    target.style.setProperty("--course-video-ratio", `${clampedRatio}`);
   }
 
   const note = target?.querySelector(".video-aspect-note") || target?.parentElement?.querySelector(".video-aspect-note");
