@@ -1495,7 +1495,8 @@ function getCustomVideoInfo(url){
   }
 
   if(isBunnyIframeUrl(clean)){
-    return {type:"iframe", provider:"bunny", url:normalizeBunnyIframeUrl(clean)};
+    const hasBunnyToken = /[?&]token=/.test(clean) && /[?&]expires=/.test(clean);
+    return {type:"iframe", provider:"bunny", url:hasBunnyToken ? clean : normalizeBunnyIframeUrl(clean)};
   }
 
   if(isYouTubeUrl(clean)){
@@ -1735,7 +1736,8 @@ function getCustomVideoInfo(url){
   }
 
   if(isBunnyIframeUrl(clean) || clean.includes("iframe.mediadelivery.net") || clean.includes("video.bunnycdn.com/play/")){
-    return {type:"iframe", provider:"bunny", url:normalizeBunnyIframeUrl(clean)};
+    const hasBunnyToken = /[?&]token=/.test(clean) && /[?&]expires=/.test(clean);
+    return {type:"iframe", provider:"bunny", url:hasBunnyToken ? clean : normalizeBunnyIframeUrl(clean)};
   }
 
   if(isYouTubeUrl(clean)){
