@@ -259,10 +259,23 @@ function getBunnyEmbedParts(input) {
 
 function signBunnyEmbedUrl(videoUrl) {
   const parts = getBunnyEmbedParts(videoUrl);
-  if (!parts) return videoUrl || "";
+  if (!parts) {
+    return {
+      secureVideoUrl: videoUrl || "",
+      videoProvider: "",
+      videoAuthStatus: "not_bunny_embed"
+    };
+  }
 
   const tokenKey = String(process.env.BUNNY_STREAM_TOKEN_KEY || "").trim();
-  if (!tokenKey) return parts.normalizedUrl;
+  if (!tokenKey) {
+    return {
+      secureVideoUrl: "",
+      videoProvider: "bunny_embed",
+      videoAuthStatus: "missing_bunny_stream_token_key",
+      normalizedVideoUrl: parts.normalizedUrl
+    };
+  }
 
   const expires = Math.floor(Date.now() / 1000) + 600;
   const token = crypto
@@ -270,14 +283,21 @@ function signBunnyEmbedUrl(videoUrl) {
     .update(`${tokenKey}${parts.videoId}${expires}`)
     .digest("hex");
 
-  return `${parts.normalizedUrl}?token=${token}&expires=${expires}`;
+  return {
+    secureVideoUrl: `${parts.normalizedUrl}?token=${token}&expires=${expires}`,
+    videoProvider: "bunny_embed",
+    videoAuthStatus: "signed",
+    normalizedVideoUrl: parts.normalizedUrl,
+    secureVideoExpiresAt: expires
+  };
 }
 
 function attachSecureVideoUrl(lesson) {
   const videoUrl = lesson.videoUrl || "";
+  const signedVideo = signBunnyEmbedUrl(videoUrl);
   return {
     ...lesson,
-    secureVideoUrl: signBunnyEmbedUrl(videoUrl)
+    ...signedVideo
   };
 }
 
