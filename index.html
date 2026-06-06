@@ -171,6 +171,208 @@ body{
   .lesson-nav-bottom{display:flex;justify-content:space-between;gap:16px;padding:22px 16px 0}.lesson-nav-bottom button{flex:1;height:58px;border-radius:12px;font-size:18px;font-weight:800}.lesson-prev{background:white;border:1.5px solid #2f5f23;color:#1f5a1a}.lesson-next{border:0;background:linear-gradient(135deg,#2f7b1e,#145608);color:white;box-shadow:0 10px 22px rgba(47,95,35,.22)}
 }
 
+
+/* ===== FIX MOBILE HEADER + HERO OVERLAP 2026-06-06 ===== */
+@media(max-width:768px){
+  header{
+    padding:14px 16px 8px!important;
+  }
+
+  header .max-w-6xl{
+    align-items:flex-start!important;
+  }
+
+  #siteTitle{
+    font-size:15px!important;
+    white-space:nowrap;
+  }
+
+  #loginArea{
+    min-width:132px!important;
+    max-width:168px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-end!important;
+    gap:6px!important;
+  }
+
+  #googleBtn{
+    max-width:150px;
+    overflow:hidden;
+    transform:scale(.74)!important;
+  }
+
+  .mobile-header-actions,
+  .mobile-bell{
+    display:none!important;
+  }
+
+  .mobile-auth-box{
+    display:flex!important;
+    align-items:center;
+    justify-content:flex-end;
+    gap:7px;
+    max-width:160px;
+    padding:6px 8px;
+    border-radius:999px;
+    background:#ffffff;
+    border:1px solid rgba(47,95,35,.18);
+    box-shadow:0 6px 18px rgba(47,95,35,.08);
+    color:#24571c;
+    font-size:11px;
+    font-weight:900;
+    line-height:1.15;
+  }
+
+  .mobile-auth-box.compact{
+    max-width:150px;
+    padding:5px 8px;
+    font-size:10px;
+  }
+
+  .mobile-auth-dot{
+    width:22px;
+    height:22px;
+    flex:0 0 22px;
+    border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    background:#a3a3a3;
+    font-size:12px;
+  }
+
+  .mobile-auth-dot::before{
+    content:"?";
+  }
+
+  .mobile-auth-dot.logged-in{
+    background:#2f7d22;
+  }
+
+  .mobile-auth-dot.logged-in::before{
+    content:"✓";
+  }
+
+  .mobile-auth-dot.logged-out{
+    background:#b64b3a;
+  }
+
+  .mobile-auth-dot.logged-out::before{
+    content:"!";
+  }
+
+  .mobile-auth-text{
+    min-width:0;
+    max-width:112px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .mobile-logout-btn{
+    border:0;
+    background:transparent;
+    color:#b64b3a;
+    font-size:10px;
+    font-weight:900;
+    padding:0;
+    margin-left:2px;
+    white-space:nowrap;
+  }
+
+  .mobile-avatar{
+    display:none!important;
+  }
+
+  .hero{
+    padding:10px 0 22px!important;
+  }
+
+  .hero-inner{
+    padding:0 18px!important;
+  }
+
+  .hero-inner .max-w-xl{
+    padding-top:2px;
+  }
+
+  .hero-img{
+    position:relative!important;
+    top:auto!important;
+    right:auto!important;
+    display:block!important;
+    width:100%!important;
+    height:215px!important;
+    margin:18px auto 0!important;
+    border-radius:24px!important;
+    object-fit:cover!important;
+    object-position:center!important;
+    filter:none!important;
+    opacity:1!important;
+    z-index:1!important;
+    box-shadow:0 16px 34px rgba(49,23,12,.10);
+  }
+
+  #courseTitle{
+    max-width:100%!important;
+    font-size:48px!important;
+    line-height:.96!important;
+    margin-top:8px!important;
+    position:relative;
+    z-index:3;
+  }
+
+  #courseSubtitle{
+    max-width:100%!important;
+    font-size:16px!important;
+    margin-top:18px!important;
+    position:relative;
+    z-index:3;
+  }
+
+  .hero .mt-7{
+    max-width:100%!important;
+    margin-top:18px!important;
+    position:relative;
+    z-index:3;
+  }
+
+  .hero .mt-7 p{
+    gap:10px!important;
+    margin:9px 0!important;
+  }
+
+  .hero .mt-7 p:nth-child(1)::after,
+  .hero .mt-7 p:nth-child(2)::after,
+  .hero .mt-7 p:nth-child(3)::after{
+    font-size:15px!important;
+    line-height:1.35!important;
+  }
+
+  .btn-green{
+    margin-top:18px!important;
+    position:relative;
+    z-index:3;
+  }
+
+  .lesson-app-header{
+    height:auto!important;
+    min-height:76px;
+    gap:8px;
+  }
+
+  .lesson-app-title{
+    font-size:22px!important;
+  }
+
+  .lesson-head-icons{
+    min-width:138px;
+    justify-content:flex-end;
+  }
+}
+
 </style>
 </head>
 
@@ -182,7 +384,10 @@ body{
       <span id="siteTitle">KHÓA HỌC ONLINE</span>
     </div>
     <div id="loginArea" class="flex items-center gap-3">
-      <div class="mobile-header-actions mobile-only"><span class="mobile-bell"></span><span class="mobile-avatar">●</span></div>
+      <div id="mobileAuthBox" class="mobile-auth-box mobile-only">
+        <span class="mobile-auth-dot logged-out"></span>
+        <span class="mobile-auth-text">Chưa đăng nhập</span>
+      </div>
       <div id="googleBtn"></div>
     </div>
   </div>
@@ -247,7 +452,7 @@ body{
   <div class="lesson-app-header">
     <button class="lesson-back" onclick="goHomeView()">‹</button>
     <div class="lesson-app-title">Bánh mì Việt Nam</div>
-    <div class="lesson-head-icons"><span class="mobile-bell"></span><span class="mobile-avatar">●</span></div>
+    <div class="lesson-head-icons"><div id="lessonMobileAuthBox" class="mobile-auth-box compact"><span class="mobile-auth-dot logged-out"></span><span class="mobile-auth-text">Chưa đăng nhập</span></div></div>
   </div>
   <div class="lesson-detail-wrap">
     <div class="lesson-breadcrumb"><span>Trang chủ</span><span>›</span><span>Khóa học</span><span>›</span><span>Bánh mì Việt Nam</span><span>›</span></div>
@@ -362,17 +567,48 @@ function getSavedSession(){
   return token;
 }
 function showLoggedIn(email){
+  const safeEmail = email || "";
   document.getElementById("loginArea").innerHTML = `
-    <div class="mobile-header-actions mobile-only"><span class="mobile-bell"></span><span class="mobile-avatar">●</span></div>
+    <div id="mobileAuthBox" class="mobile-auth-box mobile-only" title="${safeEmail}">
+      <span class="mobile-auth-dot logged-in"></span>
+      <span class="mobile-auth-text">${safeEmail}</span>
+      <button onclick="logoutGoogle()" class="mobile-logout-btn">Thoát</button>
+    </div>
     <div class="text-right text-sm hidden md:block">
       <p class="font-black text-[#2f5f23]">Đã đăng nhập</p>
-      <p class="text-black/55">${email || ""}</p>
+      <p class="text-black/55">${safeEmail}</p>
       <button onclick="logoutGoogle()" class="mt-2 text-red-600 font-bold text-xs">Đăng xuất</button>
     </div>`;
+
+  const lessonBox = document.getElementById("lessonMobileAuthBox");
+  if(lessonBox){
+    lessonBox.innerHTML = `
+      <span class="mobile-auth-dot logged-in"></span>
+      <span class="mobile-auth-text">${safeEmail}</span>
+      <button onclick="logoutGoogle()" class="mobile-logout-btn">Thoát</button>
+    `;
+    lessonBox.title = safeEmail;
+  }
 }
 function showLoginButton(){
   const area=document.getElementById("loginArea"); if(!area) return;
-  if(!document.getElementById("googleBtn")) area.innerHTML = `<div id="googleBtn"></div>`;
+  if(!document.getElementById("googleBtn")){
+    area.innerHTML = `
+      <div id="mobileAuthBox" class="mobile-auth-box mobile-only">
+        <span class="mobile-auth-dot logged-out"></span>
+        <span class="mobile-auth-text">Chưa đăng nhập</span>
+      </div>
+      <div id="googleBtn"></div>
+    `;
+  }
+
+  const lessonBox = document.getElementById("lessonMobileAuthBox");
+  if(lessonBox){
+    lessonBox.innerHTML = `
+      <span class="mobile-auth-dot logged-out"></span>
+      <span class="mobile-auth-text">Chưa đăng nhập</span>
+    `;
+  }
 }
 function renderLessons(lessons){
   const list=document.getElementById("lessonList"); list.innerHTML="";
