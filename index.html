@@ -95,20 +95,22 @@ body{
   header .max-w-6xl{max-width:none;padding:0}
   #siteTitle{font-size:14px;letter-spacing:.02em}
   header .text-2xl{font-size:22px}
-  #loginArea{display:none}
-  .mobile-header-actions{display:flex;align-items:center;gap:14px}
+  #loginArea{display:flex;position:absolute;right:16px;top:58px;z-index:90;transform:scale(.86);transform-origin:top right}
+  body.is-logged-in #loginArea{display:none}
+  .mobile-header-actions{display:none;align-items:center;gap:14px}
+  body.is-logged-in .mobile-header-actions{display:flex}
   .mobile-bell,.detail-bell{width:34px;height:34px;border:0;background:transparent;position:relative}
   .mobile-bell:before,.detail-bell:before{content:"";position:absolute;inset:5px 7px;border:2px solid #124d16;border-radius:14px 14px 10px 10px;border-bottom-width:3px}
   .mobile-bell:after,.detail-bell:after{content:"";position:absolute;left:14px;bottom:4px;width:8px;height:3px;background:#124d16;border-radius:10px}
   .mobile-bell span{position:absolute;right:0;top:0;width:18px;height:18px;border-radius:999px;background:#e52222;color:#fff;font-size:11px;font-weight:900;line-height:18px;text-align:center}
   .mobile-avatar,.detail-avatar{width:36px;height:36px;border-radius:999px;background:radial-gradient(circle at 50% 34%,#fff 0 18%,transparent 19%),radial-gradient(circle at 50% 78%,#fff 0 24%,transparent 25%),linear-gradient(135deg,#2f7b1f,#174f12);box-shadow:0 3px 10px rgba(20,75,20,.16)}
-  .hero{min-height:440px;padding:0 20px 24px;background:#fffaf4;overflow:hidden}
+  .hero{min-height:560px;padding:0 20px 24px;background:#fffaf4;overflow:hidden}
   .hero:after{display:none}
   .hero-inner{padding:24px 0 0;max-width:none}
-  .hero-inner .max-w-xl{max-width:52%;position:relative;z-index:2}
+  .hero-inner .max-w-xl{max-width:62%;position:relative;z-index:3}
   .hero-inner .flex.items-center{font-size:13px;margin-bottom:18px}
-  #courseTitle{font-size:52px;line-height:.98;letter-spacing:0}
-  #courseSubtitle{font-size:16px;line-height:1.45;margin-top:18px;text-transform:uppercase}
+  #courseTitle{font-size:40px;line-height:1.02;letter-spacing:0}
+  #courseSubtitle{font-size:14px;line-height:1.45;margin-top:16px;text-transform:uppercase}
   .hero .space-y-3{margin-top:18px;font-size:14px;line-height:1.35}
   .hero .space-y-3 p{display:flex;align-items:center;gap:10px}
   .hero .space-y-3 p:before{content:"✓";width:17px;height:17px;border:1.8px solid #245e1d;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#245e1d;font-size:11px;font-weight:900;flex:0 0 auto}
@@ -117,8 +119,8 @@ body{
   .hero .space-y-3 p:nth-child(2):after{content:"Công thức chuẩn, dễ làm tại nhà"}
   .hero .space-y-3 p:nth-child(3):after{content:"Bí quyết để bánh mì giòn vỏ, xốp ruột"}
   .hero .space-y-3 p:after{color:var(--brown);font-size:14px}
-  .hero-img{position:absolute;right:-18px;top:92px;width:58%;height:330px;object-fit:cover;border-radius:0;filter:drop-shadow(0 20px 24px rgba(125,70,10,.16))}
-  .btn-green{border-radius:9px;padding:13px 20px;font-size:15px;box-shadow:0 12px 22px rgba(47,95,35,.22)}
+  .hero-img{position:absolute;right:-42px;top:118px;width:57%;height:300px;object-fit:cover;border-radius:0;filter:drop-shadow(0 20px 24px rgba(125,70,10,.16));z-index:1;pointer-events:none}
+  .btn-green{position:relative;z-index:4;border-radius:9px;padding:13px 20px;font-size:15px;box-shadow:0 12px 22px rgba(47,95,35,.22)}
   .btn-green span{width:30px;height:30px}
   main#lessons{max-width:none;padding:26px 16px 18px;background:linear-gradient(180deg,#fff 0%,#fffaf4 100%)}
   main#lessons h2{font-size:24px;line-height:1.15}
@@ -191,16 +193,17 @@ body{
   .next-lesson{background:#1d650d;border:1.5px solid #1d650d;color:#fff;min-width:154px}
 }
 @media(max-width:430px){
-  #courseTitle{font-size:44px}
-  .hero{min-height:434px}
-  .hero-img{right:-36px;width:62%;height:312px}
-  .hero-inner .max-w-xl{max-width:56%}
+  #courseTitle{font-size:38px}
+  .hero{min-height:548px}
+  .hero-img{right:-58px;top:132px;width:62%;height:286px}
+  .hero-inner .max-w-xl{max-width:68%}
+  .hero .space-y-3 p:after{font-size:13px}
   .mobile-lesson-card{grid-template-columns:96px minmax(0,1fr) 108px}
   .mobile-open-lesson{height:44px;font-size:12px}
 }
 @media(max-width:370px){
-  #courseTitle{font-size:38px}
-  .hero-img{opacity:.92}
+  #courseTitle{font-size:34px}
+  .hero-img{opacity:.9;right:-66px}
   .mobile-lesson-card{grid-template-columns:90px minmax(0,1fr)}
   .mobile-meta{font-size:11px;gap:8px}
 }
@@ -488,6 +491,7 @@ function getSavedSession(){
 }
 
 function showLoggedIn(email){
+  document.body.classList.add("is-logged-in");
   document.getElementById("loginArea").innerHTML = `
     <div class="text-right text-sm">
       <p class="font-black text-[#2f5f23]">Đã đăng nhập</p>
@@ -500,6 +504,7 @@ function showLoggedIn(email){
 }
 
 function showLoginButton(){
+  document.body.classList.remove("is-logged-in");
   const area = document.getElementById("loginArea");
   if(!area) return;
 
