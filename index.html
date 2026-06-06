@@ -911,7 +911,7 @@ const SESSION_KEY = `course_session_token_${COURSE}`;
 const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
 const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
 const SESSION_COOKIE = "course_session_token";
-const APP_VERSION = "recipe-drive-text-fix-2026-06-06";
+const APP_VERSION = "recipe-drive-api-text-fix-2026-06-06";
 window.APP_VERSION = APP_VERSION;
 
 let currentLessons = [];
@@ -1260,7 +1260,7 @@ function recipeTextToHtml(text){
 }
 
 function fallbackRecipeContent(lesson){
-  return `<p>Chua tai duoc noi dung cong thuc tu file Drive.</p>${lesson?.recipeUrl ? `<p style="margin-top:18px"><a href="${lesson.recipeUrl}" target="_blank" style="color:#1f5a1a;font-weight:900">Mo cong thuc goc</a></p>` : ""}${lesson?.recipeTextError ? `<p style="margin-top:10px;color:#999;font-size:13px">Loi: ${escapeHtml(lesson.recipeTextError)}</p>` : ""}`;
+  return `<p>Chua tai duoc noi dung cong thuc tu file Drive.</p><p style="margin-top:10px;color:#777;font-size:14px">Hay chia se file cong thuc cho service account trong GOOGLE_CLIENT_EMAIL hoac bat Anyone with the link can view.</p>${lesson?.recipeUrl ? `<p style="margin-top:18px"><a href="${lesson.recipeUrl}" target="_blank" style="color:#1f5a1a;font-weight:900">Mo cong thuc goc</a></p>` : ""}${lesson?.recipeTextError ? `<p style="margin-top:10px;color:#999;font-size:13px">Loi: ${escapeHtml(lesson.recipeTextError)}</p>` : ""}`;
 }
 
 function renderRecipeContent(lesson){
