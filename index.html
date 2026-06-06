@@ -1416,13 +1416,13 @@ function normalizeBunnyIframeUrl(url){
       return text;
     }
 
-    return `https://player.mediadelivery.net/embed/${libraryId}/${videoId}`;
+    const query = parsed.search || "";
+    return `https://player.mediadelivery.net/embed/${libraryId}/${videoId}${query}`;
   }catch(err){
     return text
       .replace("https://iframe.mediadelivery.net/embed/", "https://player.mediadelivery.net/embed/")
       .replace("https://iframe.mediadelivery.net/play/", "https://player.mediadelivery.net/embed/")
-      .replace("https://video.bunnycdn.com/play/", "https://player.mediadelivery.net/embed/")
-      .split("?")[0];
+      .replace("https://video.bunnycdn.com/play/", "https://player.mediadelivery.net/embed/");
   }
 }
 
