@@ -855,7 +855,7 @@ const SESSION_KEY = `course_session_token_${COURSE}`;
 const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
 const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
 const SESSION_COOKIE = "course_session_token";
-const APP_VERSION = "videojs-bunny-hls-custom-player-2026-06-06";
+const APP_VERSION = "videojs-hls-only-no-bunny-player-2026-06-06";
 window.APP_VERSION = APP_VERSION;
 
 let currentLessons = [];
@@ -1411,6 +1411,179 @@ function renderMobileVideoPlaceholder(lesson){
     : "";
 
   return `<img id="mobileLessonThumb" src="${lessonThumb(lesson)}" alt=""><button class="lesson-big-play" onclick="playCurrentLessonVideo()">▶</button>${fallbackButton}`;
+}
+
+function playCurrentLessonVideo(){
+  const l = currentLessons[currentLessonIndex] || {};
+  const info = getCustomVideoInfo(l.videoUrl);
+
+  if(info.type === "empty") return alert("Bài này chưa có video.");
+
+  if(info.type === "drive"){
+    openExternalVideo(info.url);
+    return;
+  }
+
+  destroyCoursePlayers();
+
+  const card = document.querySelector(".lesson-video-card");
+  if(card) card.classList.add("is-real-player");
+
+  if(info.type === "hls" || info.type === "file"){
+    const playerId = `mobileCoursePlayer_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+    document.getElementById("mobileLessonVideo").innerHTML = renderCustomPlayerHtml(l.videoUrl, {
+      playerId,
+      poster: lessonThumb(l),
+      autoplay:true
+    });
+    initCourseVideoPlayer(playerId);
+  }else{
+    document.getElementById("mobileLessonVideo").innerHTML = renderCustomPlayerHtml(l.videoUrl, {autoplay:true});
+  }
+}
+
+
+/* ===== HARD FIX: CUSTOM PLAYER ONLY, NO BUNNY IFRAME PLAYER ===== */
+function getCustomVideoInfo(url){
+  const clean = getCleanVideoUrl(url);
+  if(!clean) return {type:"empty", url:""};
+
+  if(isBunnyHlsUrl(clean)){
+    return {type:"hls", provider:"bunny", url:clean};
+  }
+
+  if(isMp4Url(clean)){
+    return {type:"file", provider:"file", url:clean};
+  }
+
+  // Quan trọng: Direct Play / Embed của Bunny là iframe player của Bunny.
+  // Không dùng cho custom player, vì sẽ hiện giao diện Bunny.
+  if(isBunnyIframeUrl(clean) || clean.includes("iframe.mediadelivery.net") || clean.includes("video.bunnycdn.com/play/")){
+    return {type:"bunny_iframe_not_custom", provider:"bunny", url:normalizeBunnyIframeUrl(clean)};
+  }
+
+  if(clean.includes("youtube.com") || clean.includes("youtu.be") || clean.includes("vimeo.com")){
+    return {type:"iframe", provider:"embed", url:clean};
+  }
+
+  if(clean.includes("drive.google.com")){
+    return {type:"drive", provider:"drive", url:getVideoUrl(clean)};
+  }
+
+  return {type:"iframe", provider:"embed", url:clean};
+}
+
+function renderBunnyNeedHlsMessage(){
+  return `
+    <div style="
+      width:100%;
+      height:100%;
+      min-height:220px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:22px;
+      color:white;
+      background:linear-gradient(135deg,#071208,#123b16);
+      font-family:'Be Vietnam Pro',system-ui,sans-serif;
+    ">
+      <div>
+        <div style="font-size:42px;margin-bottom:10px;">🎬</div>
+        <div style="font-size:18px;font-weight:900;margin-bottom:8px;">Cần dùng HLS Playlist URL</div>
+        <div style="font-size:13px;line-height:1.55;opacity:.86;">
+          Link hiện tại là Direct Play/Embed nên sẽ hiện player mặc định của Bunny.<br>
+          Vào Bunny → Video and asset links → copy <b>HLS Playlist URL</b> rồi dán vào cột videoUrl.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCustomPlayerHtml(url, options = {}){
+  const info = getCustomVideoInfo(url);
+  const playerId = options.playerId || `coursePlayer_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+  const poster = options.poster || "";
+  const autoplay = options.autoplay ? "autoplay" : "";
+  const type = info.type === "hls" ? "application/x-mpegURL" : "video/mp4";
+
+  if(info.type === "hls" || info.type === "file"){
+    return `
+      <div class="course-player-shell">
+        <video
+          id="${playerId}"
+          class="video-js vjs-course-player vjs-big-play-centered"
+          controls
+          ${autoplay}
+          playsinline
+          webkit-playsinline
+          preload="auto"
+          ${poster ? `poster="${poster}"` : ""}>
+          <source src="${info.url}" type="${type}">
+        </video>
+      </div>
+    `;
+  }
+
+  if(info.type === "bunny_iframe_not_custom"){
+    return renderBunnyNeedHlsMessage();
+  }
+
+  if(info.type === "iframe"){
+    return `
+      <iframe
+        src="${info.url}"
+        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowfullscreen
+        webkitallowfullscreen
+        mozallowfullscreen
+        loading="lazy">
+      </iframe>
+    `;
+  }
+
+  return "";
+}
+
+function renderInlineVideo(url){
+  const info = getCustomVideoInfo(url);
+
+  if(info.type === "empty") return "";
+  if(info.type === "drive") return "";
+
+  if(info.type === "hls" || info.type === "file"){
+    const playerId = `inlineCoursePlayer_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+    const html = renderCustomPlayerHtml(url, {playerId, autoplay:true});
+    initCourseVideoPlayer(playerId);
+    return html;
+  }
+
+  return renderCustomPlayerHtml(url, {autoplay:true});
+}
+
+function openVideo(title, url){
+  const info = getCustomVideoInfo(url);
+
+  if(info.type === "empty") return alert("Bài này chưa có video.");
+
+  if(info.type === "drive"){
+    window.open(info.url, "_blank", "noopener");
+    return;
+  }
+
+  destroyCoursePlayers();
+
+  document.getElementById("modalTitle").innerText = title || "Video bài học";
+
+  if(info.type === "hls" || info.type === "file"){
+    const playerId = `modalCoursePlayer_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+    document.querySelector(".video-frame").innerHTML = renderCustomPlayerHtml(url, {playerId, autoplay:true});
+    initCourseVideoPlayer(playerId);
+  }else{
+    document.querySelector(".video-frame").innerHTML = renderCustomPlayerHtml(url, {autoplay:true});
+  }
+
+  document.getElementById("videoModal").classList.add("show");
 }
 
 function playCurrentLessonVideo(){
