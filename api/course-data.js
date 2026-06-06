@@ -146,18 +146,29 @@ function verifySessionToken(token) {
   }
 }
 
-async function getSheetsClient() {
+function getGoogleAuth() {
   const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
 
-  const auth = new google.auth.GoogleAuth({
+  return new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
       private_key: privateKey
     },
-    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+    scopes: [
+      "https://www.googleapis.com/auth/spreadsheets.readonly",
+      "https://www.googleapis.com/auth/drive.readonly"
+    ]
   });
+}
 
+async function getSheetsClient() {
+  const auth = getGoogleAuth();
   return google.sheets({ version: "v4", auth });
+}
+
+async function getDriveClient() {
+  const auth = getGoogleAuth();
+  return google.drive({ version: "v3", auth });
 }
 
 async function readSheetRange(sheets, spreadsheetId, range) {
@@ -201,7 +212,41 @@ function recipeTextUrl(recipeUrl) {
   return url;
 }
 
-async function fetchRecipeText(recipeUrl) {
+async function fetchRecipeTextFromGoogleApi(recipeUrl) {
+  const docId = getGoogleDocId(recipeUrl);
+  const fileId = docId || getGoogleDriveFileId(recipeUrl);
+  if (!fileId) return "";
+
+  const drive = await getDriveClient();
+
+  if (docId) {
+    const result = await drive.files.export(
+      {
+        fileId: docId,
+        mimeType: "text/plain"
+      },
+      {
+        responseType: "text"
+      }
+    );
+
+    return String(result.data || "").trim();
+  }
+
+  const result = await drive.files.get(
+    {
+      fileId,
+      alt: "media"
+    },
+    {
+      responseType: "text"
+    }
+  );
+
+  return String(result.data || "").trim();
+}
+
+async function fetchRecipeTextFromPublicUrl(recipeUrl) {
   const url = recipeTextUrl(recipeUrl);
   if (!url) return "";
 
@@ -224,6 +269,21 @@ async function fetchRecipeText(recipeUrl) {
   }
 
   return text.trim();
+}
+
+async function fetchRecipeText(recipeUrl) {
+  try {
+    const text = await fetchRecipeTextFromGoogleApi(recipeUrl);
+    if (text) return text;
+  } catch (err) {
+    const publicText = await fetchRecipeTextFromPublicUrl(recipeUrl).catch(publicErr => {
+      throw new Error(`${err.message}; public fallback: ${publicErr.message}`);
+    });
+
+    if (publicText) return publicText;
+  }
+
+  return fetchRecipeTextFromPublicUrl(recipeUrl);
 }
 
 async function attachRecipeText(lesson) {
