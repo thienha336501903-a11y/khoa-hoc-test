@@ -1425,7 +1425,19 @@ function normalizeBunnyIframeUrl(url){
 }
 
 function lessonVideoUrl(lesson){
+  if(lesson?.videoProvider === "bunny_embed" && lesson?.videoAuthStatus !== "signed"){
+    return "";
+  }
+
   return lesson?.secureVideoUrl || lesson?.videoUrl || "";
+}
+
+function lessonVideoAuthMessage(lesson){
+  if(lesson?.videoProvider === "bunny_embed" && lesson?.videoAuthStatus === "missing_bunny_stream_token_key"){
+    return "Bunny Embed chưa được ký token. Hãy thêm BUNNY_STREAM_TOKEN_KEY trên Vercel rồi redeploy.";
+  }
+
+  return "";
 }
 
 function isRealMobileVideoDevice(){
@@ -1454,6 +1466,10 @@ function renderPcVideoBlockedMessage(){
       font-weight:900;
     ">Video chỉ xem được trên điện thoại.</div>
   `;
+}
+
+function renderVideoAuthMessage(message){
+  return renderUnsupportedVideoMessage(message || "Video chưa sẵn sàng để phát.");
 }
 
 function blockVideoContextMenu(){
@@ -1526,6 +1542,7 @@ function renderCustomPlayerHtml(url, options = {}){
       <iframe
         src="${info.url}"
         allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+        referrerpolicy="origin"
         allowfullscreen
         webkitallowfullscreen
         mozallowfullscreen
@@ -1795,6 +1812,7 @@ function renderCustomPlayerHtml(url, options = {}){
       <iframe
         src="${info.url}"
         allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+        referrerpolicy="origin"
         allowfullscreen
         webkitallowfullscreen
         mozallowfullscreen
@@ -1882,6 +1900,14 @@ function openVideo(title, url){
 
 function playCurrentLessonVideo(){
   const l = currentLessons[currentLessonIndex] || {};
+  const authMessage = lessonVideoAuthMessage(l);
+  if(authMessage){
+    const card = document.querySelector(".lesson-video-card");
+    if(card) card.classList.add("is-real-player");
+    document.getElementById("mobileLessonVideo").innerHTML = renderVideoAuthMessage(authMessage);
+    return;
+  }
+
   const videoUrl = lessonVideoUrl(l);
   const info = getCustomVideoInfo(videoUrl);
 
