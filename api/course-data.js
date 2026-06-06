@@ -156,7 +156,8 @@ function getGoogleAuth() {
     },
     scopes: [
       "https://www.googleapis.com/auth/spreadsheets.readonly",
-      "https://www.googleapis.com/auth/drive.readonly"
+      "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/documents.readonly"
     ]
   });
 }
@@ -169,6 +170,11 @@ async function getSheetsClient() {
 async function getDriveClient() {
   const auth = getGoogleAuth();
   return google.drive({ version: "v3", auth });
+}
+
+async function getDocsClient() {
+  const auth = getGoogleAuth();
+  return google.docs({ version: "v1", auth });
 }
 
 async function readSheetRange(sheets, spreadsheetId, range) {
@@ -212,17 +218,58 @@ function recipeTextUrl(recipeUrl) {
   return url;
 }
 
+function recipePublicDownloadUrls(recipeUrl) {
+  const url = String(recipeUrl || "").trim();
+  const fileId = getGoogleDocId(url) || getGoogleDriveFileId(url);
+  if (!fileId) return [url].filter(Boolean);
+
+  return [
+    `https://drive.usercontent.google.com/download?id=${fileId}&export=download`,
+    `https://docs.google.com/uc?export=download&id=${fileId}`,
+    `https://drive.google.com/uc?export=download&id=${fileId}`,
+    recipeTextUrl(recipeUrl)
+  ].filter(Boolean);
+}
+
+function googleDocBodyToText(document) {
+  const lines = [];
+  const content = document?.body?.content || [];
+
+  content.forEach(block => {
+    const paragraph = block.paragraph;
+    if (!paragraph) return;
+
+    const text = (paragraph.elements || [])
+      .map(element => element.textRun?.content || "")
+      .join("")
+      .trimEnd();
+
+    if (text.trim()) {
+      lines.push(text.trim());
+    }
+  });
+
+  return lines.join("\n").trim();
+}
+
 async function fetchRecipeTextFromGoogleApi(recipeUrl) {
   const docId = getGoogleDocId(recipeUrl);
   const fileId = docId || getGoogleDriveFileId(recipeUrl);
   if (!fileId) return "";
 
   const drive = await getDriveClient();
+  const metadata = await drive.files.get({
+    fileId,
+    fields: "id,name,mimeType,exportLinks",
+    supportsAllDrives: true
+  });
 
-  if (docId) {
+  const mimeType = metadata.data.mimeType || "";
+
+  if (mimeType === "application/vnd.google-apps.document") {
     const result = await drive.files.export(
       {
-        fileId: docId,
+        fileId,
         mimeType: "text/plain"
       },
       {
@@ -233,10 +280,18 @@ async function fetchRecipeTextFromGoogleApi(recipeUrl) {
     return String(result.data || "").trim();
   }
 
+  if (docId) {
+    const docs = await getDocsClient();
+    const result = await docs.documents.get({ documentId: docId });
+    return googleDocBodyToText(result.data);
+  }
+
   const result = await drive.files.get(
     {
       fileId,
-      alt: "media"
+      alt: "media",
+      supportsAllDrives: true,
+      acknowledgeAbuse: true
     },
     {
       responseType: "text"
@@ -247,28 +302,38 @@ async function fetchRecipeTextFromGoogleApi(recipeUrl) {
 }
 
 async function fetchRecipeTextFromPublicUrl(recipeUrl) {
-  const url = recipeTextUrl(recipeUrl);
-  if (!url) return "";
+  const urls = recipePublicDownloadUrls(recipeUrl);
+  if (!urls.length) return "";
 
-  const response = await fetch(url, {
-    redirect: "follow",
-    headers: {
-      "User-Agent": "Mozilla/5.0"
+  let lastError = null;
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        redirect: "follow",
+        headers: {
+          "User-Agent": "Mozilla/5.0"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Recipe fetch failed: ${response.status}`);
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      const text = await response.text();
+
+      if (contentType.includes("text/html") && /<html[\s>]/i.test(text)) {
+        throw new Error("Recipe URL returned HTML instead of plain text");
+      }
+
+      return text.trim();
+    } catch (err) {
+      lastError = err;
     }
-  });
-
-  if (!response.ok) {
-    throw new Error(`Recipe fetch failed: ${response.status}`);
   }
 
-  const contentType = response.headers.get("content-type") || "";
-  const text = await response.text();
-
-  if (contentType.includes("text/html") && /<html[\s>]/i.test(text)) {
-    throw new Error("Recipe URL returned HTML instead of plain text");
-  }
-
-  return text.trim();
+  throw lastError || new Error("Recipe URL could not be fetched");
 }
 
 async function fetchRecipeText(recipeUrl) {
