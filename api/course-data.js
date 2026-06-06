@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 const SESSION_DAYS = Number(process.env.SESSION_DAYS || 30);
 const SESSION_COOKIE = "course_session_token";
-const API_VERSION = "bunny-hmac-embed-token-2026-06-06";
+const API_VERSION = "bunny-iframe-sha256-token-2026-06-06";
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -237,7 +237,7 @@ function normalizeBunnyEmbedUrl(input) {
       return "";
     }
 
-    return `https://player.mediadelivery.net/embed/${libraryId}/${videoId}`;
+    return `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
   } catch (err) {
     return "";
   }
@@ -278,14 +278,13 @@ function signBunnyEmbedUrl(videoUrl) {
   }
 
   const expires = Math.floor(Date.now() / 1000) + 600;
-  const signature = crypto
-    .createHmac("sha256", tokenKey)
+  const token = crypto
+    .createHash("sha256")
     .update(`${tokenKey}${parts.videoId}${expires}`)
     .digest("hex");
-  const token = Buffer.from(`${signature}:${expires}`).toString("base64");
 
   return {
-    secureVideoUrl: `${parts.normalizedUrl}?token=${encodeURIComponent(token)}&expires=${expires}`,
+    secureVideoUrl: `${parts.normalizedUrl}?token=${token}&expires=${expires}`,
     videoProvider: "bunny_embed",
     videoAuthStatus: "signed",
     normalizedVideoUrl: parts.normalizedUrl,
