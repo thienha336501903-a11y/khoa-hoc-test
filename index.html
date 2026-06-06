@@ -911,7 +911,7 @@ const SESSION_KEY = `course_session_token_${COURSE}`;
 const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
 const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
 const SESSION_COOKIE = "course_session_token";
-const APP_VERSION = "videojs-hls-only-no-bunny-player-2026-06-06";
+const APP_VERSION = "recipe-drive-text-fix-2026-06-06";
 window.APP_VERSION = APP_VERSION;
 
 let currentLessons = [];
@@ -1206,8 +1206,70 @@ async function initGoogle(){
   const config=await configPromise; const googleReady=await setupGoogleSignIn(config);
   if(!getSavedSession()){showLoginButton(); if(googleReady) renderGoogleButton(); else document.getElementById("statusBox").innerHTML=`<p class="font-black text-xl text-[#b65c4b]">Chưa cấu hình GOOGLE_CLIENT_ID hoặc lỗi tải Google Login.</p>`;}
 }
+function escapeHtml(text){
+  return String(text || "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function recipeTextToHtml(text){
+  const lines = String(text || "").replace(/\r\n/g,"\n").split("\n");
+  const html = [];
+  let listOpen = false;
+
+  const closeList = () => {
+    if(listOpen){
+      html.push("</ul>");
+      listOpen = false;
+    }
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+
+    if(!line){
+      closeList();
+      return;
+    }
+
+    if(/^[-*•]\s+/.test(line)){
+      if(!listOpen){
+        html.push("<ul>");
+        listOpen = true;
+      }
+      html.push(`<li>${escapeHtml(line.replace(/^[-*•]\s+/,""))}</li>`);
+      return;
+    }
+
+    closeList();
+
+    if(/^\d+[\).\s]/.test(line)){
+      html.push(`<h4>${escapeHtml(line)}</h4>`);
+    }else if(line.length <= 80 && !/[.!?]$/.test(line)){
+      html.push(`<h3>${escapeHtml(line)}</h3>`);
+    }else{
+      html.push(`<p>${escapeHtml(line)}</p>`);
+    }
+  });
+
+  closeList();
+  return html.join("");
+}
+
+function fallbackRecipeContent(lesson){
+  return `<p>Chua tai duoc noi dung cong thuc tu file Drive.</p>${lesson?.recipeUrl ? `<p style="margin-top:18px"><a href="${lesson.recipeUrl}" target="_blank" style="color:#1f5a1a;font-weight:900">Mo cong thuc goc</a></p>` : ""}${lesson?.recipeTextError ? `<p style="margin-top:10px;color:#999;font-size:13px">Loi: ${escapeHtml(lesson.recipeTextError)}</p>` : ""}`;
+}
+
 function renderRecipeContent(lesson){
-  return `<h3>Nguyên liệu (cho 10 ổ bánh)</h3><ul><li>Bột mì số 13 hoặc bột mì đa dụng: 1000g</li><li>Nước: 650ml</li><li>Men instant: 6g</li><li>Muối: 18g</li><li>Đường: 10g</li><li>Dầu ăn: 20g</li></ul><hr><h3>Các bước thực hiện</h3><h4>1. Trộn bột</h4><p>Cho bột mì, men, đường vào tô trộn đều. Thêm nước từ từ, trộn đến khi bột hòa quyện.</p><h4>2. Nhồi bột</h4><p>Nhồi bột 15–20 phút đến khi bột mịn, đàn hồi tốt, không dính tay.</p><h4>3. Ủ bột lần 1</h4><p>Ủ bột ở nhiệt độ 28–30°C trong 60–90 phút đến khi bột nở gấp đôi.</p><h4>4. Chia bột, tạo hình</h4><p>Chia bột thành 10 phần đều nhau, vê tròn, để nghỉ 15 phút rồi tạo hình.</p><h4>5. Ủ bột lần 2</h4><p>Ủ bột đã tạo hình trong 45–60 phút cho bột nở 1.5–2 lần.</p><h4>6. Rạch bánh và nướng</h4><p>Rạch mặt bánh bằng dao sắc, xịt ẩm rồi nướng đến khi vỏ vàng giòn.</p>${lesson?.recipeUrl ? `<p style="margin-top:18px"><a href="${lesson.recipeUrl}" target="_blank" style="color:#1f5a1a;font-weight:900">Mở công thức gốc</a></p>` : ""}`;
+  if(lesson?.recipeText){
+    const sourceLink = lesson.recipeUrl ? `<p style="margin-top:18px"><a href="${lesson.recipeUrl}" target="_blank" style="color:#1f5a1a;font-weight:900">Mo cong thuc goc</a></p>` : "";
+    return recipeTextToHtml(lesson.recipeText) + sourceLink;
+  }
+
+  return fallbackRecipeContent(lesson);
 }
 function renderMobileVideoPlaceholder(lesson){
   const card = document.querySelector(".lesson-video-card");
