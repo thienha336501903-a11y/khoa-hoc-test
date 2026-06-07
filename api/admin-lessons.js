@@ -128,13 +128,15 @@ export default async function handler(req, res) {
       }
 
       const headers = lessonRows[0].map(h => String(h).trim());
+      const mediaUrlsIndex = headers.indexOf("mediaUrls");
       
       // CRITICAL REQUIREMENT: Check if mediaUrls column exists
-      if (!headers.includes("mediaUrls")) {
+      if (mediaUrlsIndex === -1) {
         return adminError(res, 400, "Sheet thiếu cột mediaUrls", new Error("Missing mediaUrls column"), {
           api: "admin-lessons",
           sheet: "Lessons",
           headers,
+          mediaUrlsIndex,
           requiredColumn: "mediaUrls",
           instruction: "Vào tab Lessons thêm cột mediaUrls."
         });
