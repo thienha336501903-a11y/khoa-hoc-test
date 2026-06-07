@@ -1,66 +1,85 @@
-# Web khóa học Online: Google Login + Google Sheet + Google Drive
+# Hướng Dẫn Cấu Hình Hệ Thống Khóa Học Online
 
-## 1. Cấu trúc Google Sheet
+Hệ thống khóa học online sử dụng Google Sign-In, lấy dữ liệu từ Google Sheets, hiển thị công thức từ Drive/Docs, và phát video được bảo mật chặt chẽ qua Bunny Stream (chỉ xem được trên điện thoại, chặn Cốc Cốc, gắn watermark động).
 
-Tạo Google Sheet có 3 tab:
+---
 
-### Tab Students
-Dòng 1 bắt buộc:
+## 1. Cấu Hình Bunny Stream Security (BẮT BUỘC)
 
-gmail | course | status | note
+Để bảo vệ video không bị tải chùa bằng IDM hoặc Cốc Cốc, bạn phải cài đặt bảo mật trong thư mục Bunny Stream như sau:
 
-Ví dụ:
+1. **Enable Direct Play**: `OFF` (Tắt phát trực tiếp qua file thô).
+2. **Block Direct URL File Access**: `ON` (Chặn truy cập file video trực tiếp).
+3. **Embed View Token Authentication**: `ON` (Bắt buộc ký Token bảo mật cho Iframe Embed).
+4. **CDN Token Authentication**: `OFF` (Không cần thiết nếu đang dùng Embed Iframe).
+5. **Allowed Referrers / Allowed Domains**:
+   - Thêm tên miền chính thức trên Vercel của bạn (ví dụ: `khoa-hoc-test.vercel.app`).
+   - Thêm `localhost` nếu muốn chạy test dưới local.
+   - *Lưu ý*: KHÔNG thêm `player.mediadelivery.net` hay `iframe.mediadelivery.net` vào danh sách này.
 
-abc@gmail.com | banh-mi | active | Đã thanh toán
+---
 
-### Tab Lessons
-Dòng 1 bắt buộc:
+## 2. Định Dạng Nhập Dữ Liệu Video Trong Google Sheets
 
-course | lesson | title | description | duration | level | thumbnailUrl | videoUrl | recipeUrl
+Trong tab `Lessons`, tại cột `videoUrl`, bạn có thể nhập theo các dạng sau:
 
-Ví dụ:
+1. **Link Bunny sạch (Khuyên dùng)**:
+   `https://player.mediadelivery.net/embed/LIBRARY_ID/VIDEO_ID`
 
-banh-mi | 1 | Bánh mì Việt Nam truyền thống | Công thức chuẩn vị, vỏ giòn ruột xốp | 31:45 | Cơ bản | link ảnh | link video drive | link công thức
+2. **Link iframe cũ**:
+   `https://iframe.mediadelivery.net/embed/LIBRARY_ID/VIDEO_ID`
 
-### Tab Config
-Dòng 1 trở đi:
+3. **Full mã nhúng iframe copy trực tiếp từ Bunny**:
+   `<iframe src="https://player.mediadelivery.net/embed/LIBRARY_ID/VIDEO_ID?token=...&expires=..."></iframe>`
+   *(Hệ thống sẽ tự động tách URL từ thẻ `src`)*
 
-title | BÁNH MÌ<br><span class="text-[#d85c00]">VIỆT NAM</span>
-subtitle | 5 BÀI HỌC – CÔNG THỨC CHI TIẾT – VIDEO HƯỚNG DẪN
-heroImage | link ảnh banner
+4. **Link có token cũ**:
+   `https://player.mediadelivery.net/embed/LIBRARY_ID/VIDEO_ID?token=...&expires=...`
+   *(Hệ thống sẽ tự động loại bỏ token cũ và sinh token mới có hiệu lực 10 phút)*
 
-## 2. Quyền Drive
+**Lưu ý cực kỳ quan trọng**:
+- Link embed không có token khi mở trực tiếp trên trình duyệt sẽ báo lỗi `403 Forbidden` là hoàn toàn bình thường. Video chỉ phát được thông qua iframe được hệ thống web tự sinh token ký số bằng `BUNNY_STREAM_TOKEN_KEY`.
+- Không sử dụng link trực tiếp `.mp4` hay `.m3u8` thô trên frontend nhằm tránh việc bị bắt link và tải về hàng loạt.
 
-Video không để public nếu muốn bảo mật.
+---
 
-Share thư mục Drive/video cho Gmail học viên đã mua.
+## 3. Cấu Trúc Google Sheet
 
-## 3. Google Cloud
+Tạo một Google Sheet và chia sẻ quyền **Viewer** cho Service Account Gmail (`GOOGLE_CLIENT_EMAIL`). Sheet gồm các tab bắt buộc sau:
 
-Tạo OAuth Client ID dạng Web Application.
+### Tab: Students
+Cột:
+- `gmail`: Địa chỉ email của học viên.
+- `course`: Slug của khóa học (ví dụ: `banh-mi`).
+- `status`: Phải để `active` thì học viên mới được quyền học.
 
-Authorized JavaScript origins:
+### Tab: Lessons
+Cột:
+- `course`: Slug khóa học (ví dụ: `banh-mi`).
+- `lesson`: Số thứ tự bài (ví dụ: `1`, `2`). Sort tăng dần theo cột này.
+- `title`: Tiêu đề bài học.
+- `description`: Mô tả ngắn.
+- `duration`: Thời lượng (ví dụ: `15:30`).
+- `level`: Cấp độ (ví dụ: `Cơ bản`, `Nâng cao`).
+- `thumbnailUrl`: Link ảnh đại diện bài học.
+- `videoUrl`: Link hoặc mã nhúng Bunny.
+- `recipeUrl`: Link Google Docs / Google Drive file công thức.
 
-http://localhost:3000
-https://ten-web-cua-ban.vercel.app
+### Tab: Config
+Cột (Dữ liệu dạng Key - Value):
+- Cột A: Tên cấu hình (`title`, `subtitle`, `heroImage`).
+- Cột B: Giá trị cấu hình tương ứng.
 
-## 4. Service Account
+---
 
-Tạo Service Account.
-Tạo key JSON.
-Lấy client_email và private_key.
-Share Google Sheet cho client_email đó với quyền Viewer.
+## 4. Biến Môi Trường Trên Vercel (Environment Variables)
 
-## 5. Vercel Environment Variables
+Cần cấu hình đủ các biến môi trường sau:
 
-GOOGLE_CLIENT_ID
-GOOGLE_SHEET_ID
-GOOGLE_CLIENT_EMAIL
-GOOGLE_PRIVATE_KEY
-
-Lưu ý GOOGLE_PRIVATE_KEY giữ nguyên cả đoạn có -----BEGIN PRIVATE KEY----- và xuống dòng.
-Nếu Vercel lỗi xuống dòng, thay xuống dòng bằng \n.
-
-## 6. Chạy
-
-Đưa toàn bộ project lên GitHub rồi import vào Vercel.
+- `GOOGLE_CLIENT_ID`: Client ID từ Google Cloud Console (OAuth Client ID).
+- `GOOGLE_SHEET_ID`: ID của Google Sheet chứa dữ liệu học viên & bài học.
+- `GOOGLE_CLIENT_EMAIL`: Email của Service Account.
+- `GOOGLE_PRIVATE_KEY`: Khóa riêng tư của Service Account. Thay thế toàn bộ ký tự xuống dòng bằng `\n` nếu dán vào Vercel bị lỗi.
+- `SESSION_SECRET`: Chuỗi ký tự bất kỳ để mã hóa session cookie HMAC-SHA256.
+- `BUNNY_STREAM_TOKEN_KEY`: Token Key lấy từ trang quản lý thư mục video của Bunny Stream (phần Security).
+- `SESSION_DAYS`: (Tùy chọn) Số ngày duy trì đăng nhập (Mặc định: 30).
