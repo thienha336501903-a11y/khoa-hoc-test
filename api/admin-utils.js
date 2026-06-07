@@ -158,9 +158,7 @@ export function getGoogleAuthWrite() {
       private_key: privateKey
     },
     scopes: [
-      "https://www.googleapis.com/auth/spreadsheets",
-      "https://www.googleapis.com/auth/drive",
-      "https://www.googleapis.com/auth/documents"
+      "https://www.googleapis.com/auth/spreadsheets"
     ]
   });
 }
@@ -170,18 +168,73 @@ export async function getSheetsClient() {
   return google.sheets({ version: "v4", auth });
 }
 
-export async function getDriveClient() {
-  const auth = getGoogleAuthWrite();
-  return google.drive({ version: "v3", auth });
+export function getGoogleOAuthClient(accessToken) {
+  const auth = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  auth.setCredentials({ access_token: accessToken });
+  return auth;
 }
 
-export async function getDocsClient() {
-  const auth = getGoogleAuthWrite();
-  return google.docs({ version: "v1", auth });
+export async function verifyAdminGoogleAccessToken(accessToken, expectedEmail = "") {
+  if (!accessToken) {
+    const err = new Error("Missing Google OAuth access token");
+    err.status = 401;
+    throw err;
+  }
+
+  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  let tokenInfo;
+
+  try {
+    tokenInfo = await client.getTokenInfo(accessToken);
+  } catch (err) {
+    err.status = 401;
+    err.message = "Phiên Google Drive đã hết hạn. Vui lòng đăng nhập lại.";
+    throw err;
+  }
+
+  const scopes = Array.isArray(tokenInfo.scopes) ? tokenInfo.scopes : [];
+  const email = normalizeEmail(tokenInfo.email || "");
+  const expected = normalizeEmail(expectedEmail);
+
+  if (email && !ADMIN_EMAILS.includes(email)) {
+    const err = new Error("Gmail OAuth không nằm trong danh sách admin.");
+    err.status = 403;
+    throw err;
+  }
+
+  if (expected && email && email !== expected) {
+    const err = new Error("Gmail OAuth không khớp với Gmail admin đang đăng nhập.");
+    err.status = 403;
+    throw err;
+  }
+
+  return {
+    email: email || expected,
+    scopes
+  };
+}
+
+export async function getAdminOAuthClients(accessToken, expectedEmail = "") {
+  const tokenInfo = await verifyAdminGoogleAccessToken(accessToken, expectedEmail);
+  const auth = getGoogleOAuthClient(accessToken);
+
+  return {
+    tokenInfo,
+    drive: google.drive({ version: "v3", auth }),
+    docs: google.docs({ version: "v1", auth })
+  };
 }
 
 export function buildAdminErrorHint(context, message, code, reason) {
   const haystack = `${context || ""} ${message || ""} ${code || ""} ${reason || ""}`.toLowerCase();
+
+  if (haystack.includes("phiên google drive đã hết hạn") || haystack.includes("invalid_token") || haystack.includes("invalid token")) {
+    return "Phiên Google Drive đã hết hạn. Vui lòng đăng nhập lại.";
+  }
+
+  if (haystack.includes("insufficient") || haystack.includes("insufficient permissions") || haystack.includes("insufficient authentication scopes")) {
+    return "Bạn chưa cấp quyền Google Drive cho Admin CMS.";
+  }
 
   if (String(code) === "403" || haystack.includes("caller does not have permission") || haystack.includes("permission")) {
     return "Service Account chưa có quyền Editor với Google Sheet hoặc folder Drive.";
