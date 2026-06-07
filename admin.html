@@ -387,6 +387,10 @@
     let originalLesson = "";
     let googleClientId = "";
     let currentLessonsList = [];
+    let adminDriveTokenClient = null;
+    let adminDriveAccessToken = "";
+    let adminDriveEmail = "";
+    const ADMIN_DRIVE_SCOPES = "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents";
 
     // Helper functions for alerts
     function showToast(message, type = "success") {
@@ -486,6 +490,64 @@
       showErrorModal(title, detail);
     }
 
+    function initAdminDriveTokenClient() {
+      adminDriveTokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: googleClientId,
+        scope: ADMIN_DRIVE_SCOPES,
+        callback: () => {}
+      });
+    }
+
+    function requestGoogleDriveAccessToken(prompt = "") {
+      return new Promise((resolve, reject) => {
+        if (!adminDriveTokenClient) {
+          reject(new Error("Google OAuth Drive client chưa sẵn sàng."));
+          return;
+        }
+
+        adminDriveTokenClient.callback = response => {
+          if (response.error) {
+            reject(new Error("Bạn chưa cấp quyền Google Drive cho Admin CMS."));
+            return;
+          }
+
+          if (!response.access_token) {
+            reject(new Error("Phiên Google Drive đã hết hạn. Vui lòng đăng nhập lại."));
+            return;
+          }
+
+          adminDriveAccessToken = response.access_token;
+          resolve(response.access_token);
+        };
+
+        adminDriveTokenClient.requestAccessToken({ prompt });
+      });
+    }
+
+    async function ensureAdminDriveAccess() {
+      const accessToken = adminDriveAccessToken || await requestGoogleDriveAccessToken("consent");
+
+      try {
+        const res = await fetch("/api/admin-drive-auth", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("admin_session_token")}`
+          },
+          body: JSON.stringify({ accessToken })
+        });
+        const data = await parseApiResponse(res);
+        adminDriveEmail = data.email || "";
+        return accessToken;
+      } catch (err) {
+        adminDriveAccessToken = "";
+        if (String(err?.message || "").includes("hết hạn")) {
+          throw new Error("Phiên Google Drive đã hết hạn. Vui lòng đăng nhập lại.");
+        }
+        throw err;
+      }
+    }
+
     function showLoader(message = "Đang xử lý...") {
       document.getElementById("globalLoaderMessage").innerText = message;
       document.getElementById("globalLoader").classList.remove("hidden");
@@ -512,6 +574,7 @@
           client_id: googleClientId,
           callback: handleGoogleLoginResponse
         });
+        initAdminDriveTokenClient();
 
         google.accounts.id.renderButton(
           document.getElementById("googleSignInBtn"),
@@ -574,6 +637,8 @@
         }
       } catch (err) {
         localStorage.removeItem("admin_session_token");
+        adminDriveAccessToken = "";
+        adminDriveEmail = "";
         showLoggedOutState();
       } finally {
         hideLoader();
@@ -596,6 +661,8 @@
 
     function logoutAdmin() {
       localStorage.removeItem("admin_session_token");
+      adminDriveAccessToken = "";
+      adminDriveEmail = "";
       // Set expired cookie
       document.cookie = "admin_session_token=; Path=/; Max-Age=0; SameSite=Lax";
       location.reload();
@@ -915,7 +982,26 @@
       if (type === "video") {
         normalized = cleanBunnyUrlString(rawVal);
         urlInput.value = normalized;
-        previewHtml = `<iframe src="${normalized}" class="w-full h-full border-0 absolute inset-0" allowfullscreen></iframe>`;
+        const bunnyInfo = getBunnyEmbedInfo(normalized);
+        if (bunnyInfo) {
+          previewHtml = `
+            <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 text-white text-center p-4">
+              <div class="w-12 h-12 rounded-full bg-blue-500/20 border border-blue-300/40 flex items-center justify-center mb-3">
+                <span class="text-xl">▶</span>
+              </div>
+              <p class="text-xs font-black uppercase tracking-wider text-blue-200 mb-1">Bunny link hợp lệ</p>
+              <p class="text-[11px] text-white/80">Library ID: ${bunnyInfo.libraryId}</p>
+              <p class="text-[11px] text-white/80">Video ID: ${bunnyInfo.videoId}</p>
+              <p class="text-[11px] text-white/60 mt-3 max-w-xs">Bunny bật token authentication nên Admin không preview trực tiếp link sạch. Preview thật sẽ chỉ phát trên web học viên sau khi server ký token.</p>
+            </div>
+          `;
+        } else {
+          previewHtml = `
+            <div class="absolute inset-0 flex items-center justify-center bg-red-950 text-white text-center p-4">
+              <p class="text-xs font-bold">Bunny link chưa hợp lệ. Hãy kiểm tra Library ID và Video ID.</p>
+            </div>
+          `;
+        }
       } else if (type === "youtube") {
         normalized = cleanYouTubeUrlString(rawVal);
         urlInput.value = normalized;
@@ -968,6 +1054,37 @@
         return `https://iframe.mediadelivery.net/embed/${regexMatch[1]}/${regexMatch[2]}`;
       }
       return src;
+    }
+
+    function getBunnyEmbedInfo(input) {
+      const src = cleanBunnyUrlString(input);
+
+      try {
+        const url = new URL(src);
+        const host = url.hostname.replace(/^www\./, "");
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (
+          (host === "iframe.mediadelivery.net" || host === "player.mediadelivery.net") &&
+          (parts[0] === "embed" || parts[0] === "play") &&
+          parts[1] &&
+          parts[2]
+        ) {
+          return {
+            libraryId: parts[1],
+            videoId: parts[2],
+            cleanUrl: `https://iframe.mediadelivery.net/embed/${parts[1]}/${parts[2]}`
+          };
+        }
+      } catch (err) {}
+
+      const match = src.match(/(?:player|iframe)\.mediadelivery\.net\/(?:embed|play)\/([^/]+)\/([^/?#]+)/);
+      if (!match) return null;
+
+      return {
+        libraryId: match[1],
+        videoId: match[2],
+        cleanUrl: `https://iframe.mediadelivery.net/embed/${match[1]}/${match[2]}`
+      };
     }
 
     // Standalone YouTube Parser (Matching backend normalizer rules)
@@ -1030,6 +1147,7 @@
           const base64Data = reader.result;
 
           try {
+            const accessToken = await ensureAdminDriveAccess();
             const res = await fetch("/api/admin-upload-image", {
               method: "POST",
               headers: {
@@ -1042,7 +1160,8 @@
                 mimeType: file.type,
                 course,
                 lesson,
-                title
+                title,
+                accessToken
               })
             });
 
@@ -1087,6 +1206,7 @@
           const base64Data = reader.result;
 
           try {
+            const accessToken = await ensureAdminDriveAccess();
             const res = await fetch("/api/admin-upload-image", {
               method: "POST",
               headers: {
@@ -1099,7 +1219,8 @@
                 mimeType: file.type,
                 course,
                 lesson,
-                title
+                title,
+                accessToken
               })
             });
 
@@ -1186,10 +1307,12 @@
       showLoader("Đang tạo Google Docs trên Drive...");
 
       try {
+        const accessToken = await ensureAdminDriveAccess();
         const body = {
           course,
           lesson,
-          title
+          title,
+          accessToken
         };
 
         if (selectedRecipeBase64) {
@@ -1238,8 +1361,19 @@
       const lines = [];
       blocks.forEach(b => {
         const type = b.dataset.type;
-        const title = b.querySelector(".media-block-title").value.trim().replace(/[|\n]/g, "-");
-        const url = b.querySelector(".media-block-url").value.trim().replace(/[|\n]/g, "");
+        const titleInput = b.querySelector(".media-block-title");
+        const urlInput = b.querySelector(".media-block-url");
+        const title = titleInput.value.trim().replace(/[|\n]/g, "-");
+        let url = urlInput.value.trim();
+
+        if (type === "video") {
+          url = cleanBunnyUrlString(url);
+        } else if (type === "youtube") {
+          url = cleanYouTubeUrlString(url);
+        }
+
+        url = url.replace(/[|\n]/g, "");
+        urlInput.value = url;
 
         if (title && url) {
           lines.push(`${type}|${title}|${url}`);
@@ -1248,6 +1382,10 @@
       const val = lines.join("\n");
       document.getElementById("lessonMediaUrls").value = val;
       return val;
+    }
+
+    function buildMediaUrls() {
+      return compileMediaUrls();
     }
 
     function previewMediaUrls() {
@@ -1273,7 +1411,7 @@
       const videoUrl = document.getElementById("lessonVideoUrl").value.trim();
       const recipeUrl = document.getElementById("lessonRecipeUrl").value.trim();
       
-      const mediaUrls = compileMediaUrls();
+      const mediaUrls = buildMediaUrls();
 
       if (!course || !lesson || !title) {
         showToast("Vui lòng điền đầy đủ khóa học, số bài và tiêu đề.", "error");
@@ -1282,23 +1420,29 @@
 
       showLoader("Đang lưu dữ liệu bài học vào Google Sheets...");
 
+      const lessonData = {
+        course,
+        lesson,
+        title,
+        description,
+        duration,
+        level,
+        thumbnailUrl,
+        videoUrl,
+        recipeUrl,
+        status: "active"
+      };
+
+      lessonData.mediaUrls = mediaUrls;
+
+      console.log("MEDIA_URLS_BUILT", mediaUrls);
+      console.log("LESSON_DATA_BEFORE_SAVE", lessonData);
+
       const payload = {
         action: isEditMode ? "update" : "create",
         course,
         lesson,
-        lessonData: {
-          course,
-          lesson,
-          title,
-          description,
-          duration,
-          level,
-          thumbnailUrl,
-          videoUrl,
-          mediaUrls,
-          recipeUrl,
-          status: "active"
-        }
+        lessonData
       };
 
       if (isEditMode) {
