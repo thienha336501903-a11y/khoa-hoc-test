@@ -576,6 +576,62 @@
       }
     }
 
+    function requestGoogleDriveAccessToken(prompt = "") {
+      return new Promise((resolve, reject) => {
+        if (!adminDriveTokenClient) {
+          reject(new Error("Google OAuth Drive client chưa sẵn sàng."));
+          return;
+        }
+
+        adminDriveTokenClient.callback = response => {
+          const token = String(response?.access_token || "").trim();
+          if (response?.error || !token) {
+            adminDriveAccessToken = "";
+            reject(new Error("Bạn chưa cấp quyền Google Drive cho Admin CMS. Vui lòng bấm lại và chọn Cho phép."));
+            return;
+          }
+
+          adminDriveAccessToken = token;
+          resolve(token);
+        };
+
+        adminDriveTokenClient.requestAccessToken({ prompt });
+      });
+    }
+
+    async function ensureAdminDriveAccess() {
+      let accessToken = String(adminDriveAccessToken || "").trim();
+
+      if (!accessToken) {
+        accessToken = await requestGoogleDriveAccessToken("consent");
+      }
+
+      accessToken = String(accessToken || "").trim();
+      if (!accessToken) {
+        adminDriveAccessToken = "";
+        throw new Error("Bạn chưa cấp quyền Google Drive cho Admin CMS. Vui lòng bấm lại và chọn Cho phép.");
+      }
+
+      adminDriveAccessToken = accessToken;
+      const statusEl = document.getElementById("adminDriveStatus");
+      if (statusEl) {
+        statusEl.innerText = "Đã kết nối Google Drive";
+      }
+      return accessToken;
+    }
+
+    async function connectGoogleDrive() {
+      showLoader("Đang kết nối Google Drive...");
+      try {
+        await ensureAdminDriveAccess();
+        showToast("Đã kết nối Google Drive");
+      } catch (err) {
+        showApiError("Kết nối Google Drive thất bại", err, "Kết nối Google Drive thất bại");
+      } finally {
+        hideLoader();
+      }
+    }
+
     function showLoader(message = "Đang xử lý...") {
       document.getElementById("globalLoaderMessage").innerText = message;
       document.getElementById("globalLoader").classList.remove("hidden");
