@@ -612,6 +612,16 @@
       }
     }
 
+    function clearWatermarkFrom(containerEl) {
+      destroyWatermark();
+      if (!containerEl) return;
+      containerEl.querySelectorAll(".watermark-overlay").forEach(el => el.remove());
+    }
+
+    function shouldShowWatermarkForLesson(lesson) {
+      return lesson?.videoProvider === "bunny_embed";
+    }
+
     // Render blocking messages instead of triggering embed
     function getCocCocBlockedHtml() {
       return `
@@ -981,9 +991,7 @@
       document.getElementById("modalTitle").innerText = title || "Video bài học";
       const container = document.getElementById("desktopVideoContainer");
       container.innerHTML = getPCBlockedHtml();
-      
-      const email = getSavedEmail();
-      createWatermark(container, email);
+      clearWatermarkFrom(container);
       
       document.getElementById("videoModal").classList.remove("hidden");
       document.getElementById("videoModal").classList.add("flex");
@@ -994,9 +1002,7 @@
       document.getElementById("modalTitle").innerText = title || "Video bài học";
       const container = document.getElementById("desktopVideoContainer");
       container.innerHTML = getCocCocBlockedHtml();
-      
-      const email = getSavedEmail();
-      createWatermark(container, email);
+      clearWatermarkFrom(container);
 
       document.getElementById("videoModal").classList.remove("hidden");
       document.getElementById("videoModal").classList.add("flex");
@@ -1099,14 +1105,14 @@
       // 1. Check Cốc Cốc Browser Block
       if (isCocCocBrowser()) {
         wrapper.innerHTML = getCocCocBlockedHtml();
-        createWatermark(wrapper, getSavedEmail());
+        clearWatermarkFrom(wrapper);
         return;
       }
 
       // 2. Check PC/Laptop Block
       if (!isMobileDevice()) {
         wrapper.innerHTML = getPCBlockedHtml();
-        createWatermark(wrapper, getSavedEmail());
+        clearWatermarkFrom(wrapper);
         return;
       }
 
@@ -1136,19 +1142,23 @@
       // Check again before iframe creation after async refresh returns
       if (isCocCocBrowser()) {
         wrapper.innerHTML = getCocCocBlockedHtml();
-        createWatermark(wrapper, getSavedEmail());
+        clearWatermarkFrom(wrapper);
         return;
       }
 
       if (!isMobileDevice()) {
         wrapper.innerHTML = getPCBlockedHtml();
-        createWatermark(wrapper, getSavedEmail());
+        clearWatermarkFrom(wrapper);
         return;
       }
 
       // 3. Render clean Bunny Stream Iframe
       wrapper.innerHTML = getIframePlayerHtml(videoUrl);
-      createWatermark(wrapper, getSavedEmail());
+      if (shouldShowWatermarkForLesson(freshLesson)) {
+        createWatermark(wrapper, getSavedEmail());
+      } else {
+        clearWatermarkFrom(wrapper);
+      }
     }
 
     function toggleRecipeMore() {
