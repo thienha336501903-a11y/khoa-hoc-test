@@ -1,80 +1,98 @@
-import {
-  ADMIN_EMAILS,
-  getAdminEmailFromRequest,
-  verifyAdminGoogleAccessToken,
-  adminError
-} from "./admin-utils.js";
+// api/admin-drive-auth.js — REBUILT CLEAN 2026-06-07
+// Purpose: Verify Gmail admin OAuth access token for Drive/Docs.
+// Called ONLY when user explicitly clicks "Kết nối Google Drive".
+// Never called on login, course load, or lesson load.
 
-const REQUIRED_DRIVE_SCOPES = [
-  "https://www.googleapis.com/auth/drive.file",
-  "https://www.googleapis.com/auth/documents"
-];
-
-function oauthNotConnected(res) {
-  return res.status(200).json({
-    success: false,
-    needsOAuth: true,
-    error: "Chua co Google Drive OAuth access token",
-    message: "Ban chua cap quyen Google Drive cho Admin CMS. Vui long bam lai va chon Cho phep.",
-    hint: "Admin chua cap quyen Google Drive OAuth. Hay bam Ket noi Google Drive hoac thao tac lai Tao Docs/Upload anh va chon Cho phep.",
-    extra: {
-      api: "admin-drive-auth"
-    }
-  });
-}
+import { getAdminFromRequest, isAdminEmail, normalizeEmail, errResponse } from "./admin-utils.js";
 
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ success: false, error: "Method not allowed" });
+  }
+
   try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
-
-    const adminEmail = await getAdminEmailFromRequest(req);
-    if (!adminEmail) {
-      return adminError(res, 401, "Unauthorized: Admin access required", new Error("Unauthorized"), {
-        api: "admin-drive-auth"
+    // ── 1. Verify admin session first ────────────────────────────────────────
+    const adminSession = getAdminFromRequest(req);
+    if (!adminSession) {
+      return errResponse(res, 401, {
+        error: "Chưa đăng nhập admin",
+        hint: "Vui lòng đăng nhập tài khoản admin trước.",
       });
     }
 
+    // ── 2. Check access token presence ───────────────────────────────────────
     const { accessToken } = req.body || {};
-    const cleanAccessToken = String(accessToken || "").trim();
 
-    if (!cleanAccessToken || cleanAccessToken === "undefined" || cleanAccessToken === "null") {
-      return oauthNotConnected(res);
-    }
-
-    const tokenInfo = await verifyAdminGoogleAccessToken(cleanAccessToken, adminEmail);
-    const missingScopes = REQUIRED_DRIVE_SCOPES.filter(scope => !tokenInfo.scopes.includes(scope));
-
-    if (missingScopes.length > 0) {
-      return adminError(res, 403, "Ban chua cap quyen Google Drive cho Admin CMS", new Error("Insufficient Google OAuth scopes"), {
-        api: "admin-drive-auth",
-        email: tokenInfo.email || adminEmail,
-        requiredScopes: REQUIRED_DRIVE_SCOPES,
-        grantedScopes: tokenInfo.scopes,
-        missingScopes
+    if (!accessToken || typeof accessToken !== "string" || !accessToken.trim()) {
+      // Return 200 with needsOAuth flag — not a 500 server error
+      return res.status(200).json({
+        success: false,
+        needsOAuth: true,
+        error: "Chưa có Google Drive OAuth access token",
+        hint: "Hãy bấm Kết nối Google Drive hoặc thao tác lại Tạo Docs/Upload ảnh và chọn Cho phép.",
       });
     }
 
-    if (tokenInfo.email && !ADMIN_EMAILS.includes(tokenInfo.email)) {
-      return adminError(res, 403, "Gmail OAuth khong nam trong danh sach admin", new Error("Unauthorized OAuth email"), {
-        api: "admin-drive-auth",
-        email: tokenInfo.email
+    // ── 3. Verify token with Google tokeninfo endpoint ────────────────────────
+    let tokenInfo;
+    try {
+      const tokenInfoRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`
+      );
+      tokenInfo = await tokenInfoRes.json();
+    } catch (err) {
+      return errResponse(res, 502, {
+        error: "Không thể kiểm tra token với Google",
+        message: err.message,
+        hint: "Kiểm tra kết nối mạng hoặc thử lại.",
+      });
+    }
+
+    if (tokenInfo.error) {
+      return res.status(200).json({
+        success: false,
+        needsOAuth: true,
+        error: "Access token không hợp lệ hoặc đã hết hạn",
+        reason: tokenInfo.error_description || tokenInfo.error,
+        hint: "Bấm Kết nối Google Drive để lấy token mới.",
+      });
+    }
+
+    // ── 4. Verify email matches admin ─────────────────────────────────────────
+    const tokenEmail = normalizeEmail(tokenInfo.email);
+    if (!isAdminEmail(tokenEmail)) {
+      return errResponse(res, 403, {
+        error: "Token Drive không thuộc tài khoản admin",
+        extra: { tokenEmail, adminEmail: adminSession.email },
+        hint: `Token Drive phải thuộc email admin. Đang dùng: ${adminSession.email}`,
+      });
+    }
+
+    // ── 5. Verify required scopes ─────────────────────────────────────────────
+    const scope = String(tokenInfo.scope || "");
+    const hasDriveFile = scope.includes("drive.file") || scope.includes("https://www.googleapis.com/auth/drive.file");
+    const hasDocuments = scope.includes("documents") || scope.includes("https://www.googleapis.com/auth/documents");
+
+    if (!hasDriveFile || !hasDocuments) {
+      return res.status(200).json({
+        success: false,
+        needsOAuth: true,
+        error: "Token thiếu quyền cần thiết",
+        extra: { scope, hasDriveFile, hasDocuments },
+        hint: "Cần quyền drive.file và documents. Hãy bấm Kết nối Google Drive lại để xin đúng quyền.",
       });
     }
 
     return res.status(200).json({
       success: true,
-      email: tokenInfo.email || adminEmail,
-      scopes: tokenInfo.scopes
+      email: tokenEmail,
+      scopes: { hasDriveFile, hasDocuments },
     });
   } catch (err) {
-    if (String(err?.message || "").includes("Missing Google OAuth access token")) {
-      return oauthNotConnected(res);
-    }
-
-    return adminError(res, err.status || 500, "Xac thuc Google Drive OAuth that bai", err, {
-      api: "admin-drive-auth"
+    console.error("[admin-drive-auth] Unexpected error:", err);
+    return errResponse(res, 500, {
+      error: "Lỗi server khi kiểm tra Drive OAuth",
+      message: err.message,
     });
   }
 }

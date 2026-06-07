@@ -1,37 +1,66 @@
+// api/admin-upload-recipe.js — REBUILT CLEAN 2026-06-07
+// Purpose: Create Google Doc on Drive using Gmail admin OAuth access token.
+// Does NOT use Service Account for Drive/Docs.
+// Called ONLY when user explicitly clicks "Tạo Google Docs từ công thức".
+
 import {
-  getAdminOAuthClients,
-  getAdminEmailFromRequest,
-  adminError
+  getAdminFromRequest,
+  getDriveClientWithToken,
+  getDocsClientWithToken,
+  errResponse,
 } from "./admin-utils.js";
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "4.5mb",
+    },
+  },
+};
+
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ success: false, error: "Method not allowed" });
+  }
+
   try {
-    const adminEmail = await getAdminEmailFromRequest(req);
-    if (!adminEmail) {
-      return adminError(res, 401, "Unauthorized: Admin access required", new Error("Unauthorized"), {
-        api: "admin-upload-recipe"
+    // ── 1. Verify admin session ───────────────────────────────────────────────
+    const adminSession = getAdminFromRequest(req);
+    if (!adminSession) {
+      return errResponse(res, 401, {
+        error: "Chưa đăng nhập admin",
+        hint: "Vui lòng đăng nhập lại.",
       });
     }
 
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
-
     const { course, lesson, title, text, fileData, fileName, accessToken } = req.body || {};
-    const folderId = process.env.GOOGLE_DRIVE_RECIPE_FOLDER_ID || "";
 
-    if (!course || !lesson || !title) {
-      return res.status(400).json({ error: "Missing course, lesson, or title parameters" });
+    // ── 2. Check Drive access token ───────────────────────────────────────────
+    if (!accessToken || typeof accessToken !== "string" || !accessToken.trim()) {
+      return res.status(200).json({
+        success: false,
+        needsOAuth: true,
+        error: "Chưa kết nối Google Drive",
+        hint: "Bấm Kết nối Google Drive trong Admin CMS để cấp quyền tạo tài liệu.",
+      });
     }
 
+    // ── 3. Validate required fields ───────────────────────────────────────────
+    if (!course || !lesson || !title) {
+      return errResponse(res, 400, {
+        error: "Thiếu course, lesson hoặc title",
+        hint: "Hãy điền đầy đủ thông tin bài học trước khi tạo tài liệu công thức.",
+      });
+    }
+
+    // ── 4. Resolve text content ───────────────────────────────────────────────
     let content = "";
-    if (fileData) {
+    if (fileData && typeof fileData === "string") {
       try {
         content = Buffer.from(fileData, "base64").toString("utf8").trim();
-      } catch (err) {
-        return adminError(res, 400, "File công thức không phải base64 hợp lệ", err, {
-          api: "admin-upload-recipe",
-          fileName: fileName || ""
+      } catch {
+        return errResponse(res, 400, {
+          error: "Dữ liệu file không hợp lệ (base64 decode failed)",
         });
       }
     } else if (text) {
@@ -39,55 +68,85 @@ export default async function handler(req, res) {
     }
 
     if (!content) {
-      return res.status(400).json({ error: "Nội dung công thức trống" });
+      return errResponse(res, 400, {
+        error: "Nội dung công thức trống",
+        hint: "Nhập văn bản vào ô công thức hoặc chọn file .txt.",
+      });
     }
 
-    const { drive, docs, tokenInfo } = await getAdminOAuthClients(accessToken, adminEmail);
-    const ownerEmail = tokenInfo.email || adminEmail;
+    // ── 5. Create Google Doc via admin OAuth ──────────────────────────────────
+    const drive = getDriveClientWithToken(accessToken);
+    const docs = getDocsClientWithToken(accessToken);
+
+    const folderId = (process.env.GOOGLE_DRIVE_RECIPE_FOLDER_ID || "").trim();
     const docName = `${course} - ${lesson} - ${title}`;
 
     const fileMetadata = {
       name: docName,
-      mimeType: "application/vnd.google-apps.document"
+      mimeType: "application/vnd.google-apps.document",
     };
+    if (folderId) fileMetadata.parents = [folderId];
 
-    if (folderId) {
-      fileMetadata.parents = [folderId.trim()];
+    let docFile;
+    try {
+      docFile = await drive.files.create({
+        requestBody: fileMetadata,
+        fields: "id",
+        supportsAllDrives: true,
+      });
+    } catch (err) {
+      const gErr = err?.errors?.[0] || {};
+      return errResponse(res, 500, {
+        error: "Tạo file Google Docs thất bại",
+        message: err.message,
+        code: gErr.code,
+        reason: gErr.reason,
+        hint: folderId
+          ? `Kiểm tra tài khoản admin có quyền tạo file trong folder: ${folderId}`
+          : "Thử thêm biến GOOGLE_DRIVE_RECIPE_FOLDER_ID hoặc kiểm tra quyền Drive.",
+        extra: { folderId: folderId || "(root)", docName, adminEmail: adminSession.email },
+        googleErrors: err?.errors,
+      });
     }
-
-    const docFile = await drive.files.create({
-      requestBody: fileMetadata,
-      fields: "id, owners(emailAddress)",
-      supportsAllDrives: true
-    });
 
     const documentId = docFile.data.id;
     if (!documentId) {
-      throw new Error("Failed to create Google Doc in Drive");
+      return errResponse(res, 500, {
+        error: "Google API không trả về ID tài liệu",
+      });
     }
 
-    await docs.documents.batchUpdate({
-      documentId,
-      requestBody: {
-        requests: [
-          {
-            insertText: {
-              index: 1,
-              text: content
-            }
-          }
-        ]
-      }
-    });
+    // ── 6. Insert content ─────────────────────────────────────────────────────
+    try {
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: {
+          requests: [{ insertText: { location: { index: 1 }, text: content } }],
+        },
+      });
+    } catch (err) {
+      const gErr = err?.errors?.[0] || {};
+      return errResponse(res, 500, {
+        error: "Ghi nội dung vào Google Docs thất bại",
+        message: err.message,
+        code: gErr.code,
+        reason: gErr.reason,
+        extra: { documentId, adminEmail: adminSession.email },
+        googleErrors: err?.errors,
+      });
+    }
 
-    await drive.permissions.create({
-      fileId: documentId,
-      requestBody: {
-        role: "reader",
-        type: "anyone"
-      },
-      supportsAllDrives: true
-    });
+    // ── 7. Share as public reader ─────────────────────────────────────────────
+    try {
+      await drive.permissions.create({
+        fileId: documentId,
+        requestBody: { role: "reader", type: "anyone" },
+        supportsAllDrives: true,
+      });
+    } catch (err) {
+      console.warn("[admin-upload-recipe] Could not share doc publicly:", err.message);
+      // Not fatal — still return the URL
+    }
 
     const recipeUrl = `https://docs.google.com/document/d/${documentId}/edit`;
 
@@ -95,25 +154,13 @@ export default async function handler(req, res) {
       success: true,
       recipeUrl,
       documentId,
-      ownerEmail,
-      authMode: "admin_oauth"
+      docName,
     });
   } catch (err) {
-    return adminError(res, err.status || 500, "Tạo Google Docs công thức thất bại", err, {
-      api: "admin-upload-recipe",
-      course: req.body?.course || "",
-      lesson: req.body?.lesson || "",
-      title: req.body?.title || "",
-      folderId: process.env.GOOGLE_DRIVE_RECIPE_FOLDER_ID || "",
-      usesAdminOAuth: true
+    console.error("[admin-upload-recipe] Unexpected error:", err);
+    return errResponse(res, 500, {
+      error: "Lỗi server khi tạo Google Docs",
+      message: err.message,
     });
   }
 }
-
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: "4.5mb"
-    }
-  }
-};

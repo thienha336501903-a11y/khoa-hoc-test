@@ -1,352 +1,306 @@
+// api/admin-lessons.js — REBUILT CLEAN 2026-06-07
+// Purpose: CRUD operations for lessons in Google Sheet.
+// Uses Service Account (Sheets only). No Drive/Docs involved.
+// Auth required for ALL methods (GET and POST).
+
 import {
+  getAdminFromRequest,
   getSheetsClient,
-  getAdminEmailFromRequest,
   normalizeBunnyUrl,
   normalizeYouTubeUrl,
-  adminError
+  sanitizeMediaUrls,
+  errResponse,
 } from "./admin-utils.js";
 
-// Check if a URL is a YouTube link
-function isYouTubeUrl(url) {
-  const text = String(url || "").toLowerCase();
-  return (
-    text.includes("youtube.com") ||
-    text.includes("youtu.be") ||
-    text.includes("youtube-nocookie.com")
-  );
-}
-
-// Check if a URL is a Bunny link
-function isBunnyUrl(url) {
-  const text = String(url || "").toLowerCase();
-  return (
-    text.includes("mediadelivery.net") ||
-    text.includes("bunnycdn.com")
-  );
-}
-
-function normalizeVideoUrl(url) {
-  if (isYouTubeUrl(url)) {
-    return normalizeYouTubeUrl(url);
-  }
-  if (isBunnyUrl(url)) {
-    return normalizeBunnyUrl(url);
-  }
-  return String(url || "").trim();
-}
-
-function sanitizeMediaUrls(val) {
-  return String(val || "")
-    .split("\n")
-    .map(line => {
-      const parts = line.split("|");
-      if (parts.length < 3) return "";
-      const type = String(parts[0]).trim();
-      const title = String(parts[1]).trim().replace(/[|\n]/g, "-");
-      const url = String(parts[2]).trim().replace(/[|\n]/g, "");
-      return `${type}|${title}|${url}`;
-    })
-    .filter(Boolean)
-    .join("\n");
-}
+// ─── HELPERS ───────────────────────────────────────────────────────────────────
 
 function rowToObject(headers, row) {
   const obj = {};
   headers.forEach((h, i) => {
-    obj[h] = row[i] ? String(row[i]).trim() : "";
+    obj[h] = row[i] !== undefined ? String(row[i]).trim() : "";
   });
   return obj;
 }
 
+function normalizeVideoUrl(raw) {
+  const str = String(raw || "").trim();
+  if (!str) return "";
+  // Try Bunny first
+  const bunny = normalizeBunnyUrl(str);
+  if (bunny.ok) return bunny.url;
+  // Try YouTube
+  const yt = normalizeYouTubeUrl(str);
+  if (yt.ok) return yt.url;
+  return str;
+}
+
+const REQUIRED_LESSON_FIELDS = [
+  "course", "lesson", "title", "description",
+  "duration", "level", "thumbnailUrl", "videoUrl",
+  "recipeUrl", "mediaUrls", "status",
+];
+
+// ─── HANDLER ───────────────────────────────────────────────────────────────────
+
 export default async function handler(req, res) {
   try {
-    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-    if (!spreadsheetId) {
-      return adminError(res, 500, "Missing GOOGLE_SHEET_ID in environment", new Error("Missing GOOGLE_SHEET_ID"), {
-        api: "admin-lessons"
+    // ── Auth — required for ALL methods ──────────────────────────────────────
+    const adminSession = getAdminFromRequest(req);
+    if (!adminSession) {
+      return errResponse(res, 401, {
+        error: "Chưa đăng nhập admin",
+        hint: "Vui lòng đăng nhập lại.",
       });
     }
 
-    const adminEmail = await getAdminEmailFromRequest(req);
-    if (!adminEmail) {
-      return adminError(res, 401, "Unauthorized: Admin access required", new Error("Unauthorized"), {
-        api: "admin-lessons"
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+    if (!spreadsheetId) {
+      return errResponse(res, 500, {
+        error: "Thiếu GOOGLE_SHEET_ID trong cấu hình Vercel",
       });
     }
 
     const sheets = await getSheetsClient();
 
-    // GET: Read lessons for a course slug
+    // ── GET: List lessons for a course ────────────────────────────────────────
     if (req.method === "GET") {
       const { course } = req.query || {};
-      const courseSlug = String(course || "").trim();
-
-      if (!courseSlug) {
-        return res.status(400).json({ error: "Missing course parameter" });
+      if (!course) {
+        return errResponse(res, 400, { error: "Thiếu tham số course" });
       }
+      const courseSlug = String(course).trim();
 
-      const lessonRowsResult = await sheets.spreadsheets.values.get({
+      const result = await sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: "Lessons!A:Z"
+        range: "Lessons!A:Z",
       });
-      const lessonRows = lessonRowsResult.data.values || [];
+      const rows = result.data.values || [];
 
-      if (lessonRows.length < 1) {
-        return res.status(200).json({ lessons: [] });
-      }
+      if (rows.length < 1) return res.status(200).json({ success: true, lessons: [] });
 
-      const headers = lessonRows[0].map(h => String(h).trim());
-      const lessons = lessonRows
+      const headers = rows[0].map((h) => String(h).trim());
+      const lessons = rows
         .slice(1)
-        .map(row => rowToObject(headers, row))
-        .filter(l => String(l.course || "").trim() === courseSlug)
+        .map((row) => rowToObject(headers, row))
+        .filter((l) => String(l.course || "").trim() === courseSlug)
         .sort((a, b) => Number(a.lesson || 0) - Number(b.lesson || 0));
 
-      return res.status(200).json({ lessons });
+      return res.status(200).json({ success: true, lessons });
     }
 
-    // POST: Write operations (Create, Update, Delete)
+    // ── POST: Create / Update / Delete ────────────────────────────────────────
     if (req.method === "POST") {
-      const { action, course, lesson, originalCourse, originalLesson, lessonData } = req.body || {};
-      
+      const { action, course, lesson, originalCourse, originalLesson, lessonData } =
+        req.body || {};
+
       if (!action) {
-        return res.status(400).json({ error: "Missing action parameter" });
+        return errResponse(res, 400, { error: "Thiếu tham số action" });
       }
 
-      // Fetch current sheet to check headers and rows
-      const lessonRowsResult = await sheets.spreadsheets.values.get({
+      // Fetch full Lessons sheet
+      const sheetResult = await sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: "Lessons!A:Z"
+        range: "Lessons!A:Z",
       });
-      const lessonRows = lessonRowsResult.data.values || [];
+      const rows = sheetResult.data.values || [];
 
-      if (lessonRows.length < 1) {
-        return adminError(res, 500, "Sheet Lessons trống hoặc không có dòng tiêu đề", new Error("Sheet Lessons missing header row"), {
-          api: "admin-lessons",
-          sheet: "Lessons"
+      if (rows.length < 1) {
+        return errResponse(res, 500, {
+          error: "Tab Lessons trống hoặc thiếu dòng tiêu đề",
+          hint: "Vào Google Sheet và tạo dòng tiêu đề với các cột cần thiết.",
         });
       }
 
-      const headers = lessonRows[0].map(h => String(h).trim());
-      const mediaUrlsIndex = headers.indexOf("mediaUrls");
-      
-      // CRITICAL REQUIREMENT: Check if mediaUrls column exists
-      if (mediaUrlsIndex === -1) {
-        return adminError(res, 400, "Sheet thiếu cột mediaUrls", new Error("Missing mediaUrls column"), {
-          api: "admin-lessons",
-          sheet: "Lessons",
-          headers,
-          mediaUrlsIndex,
-          requiredColumn: "mediaUrls",
-          instruction: "Vào tab Lessons thêm cột mediaUrls."
+      const headers = rows[0].map((h) => String(h).trim());
+
+      // ── Check mediaUrls column ────────────────────────────────────────────
+      if (!headers.includes("mediaUrls")) {
+        return errResponse(res, 400, {
+          error: "Sheet thiếu cột mediaUrls. Vào tab Lessons thêm cột mediaUrls.",
+          hint: "Thêm cột có tên chính xác 'mediaUrls' vào dòng tiêu đề của tab Lessons.",
+          extra: { currentHeaders: headers },
         });
       }
 
-      // 1. CREATE LESSON
-      if (action === "create") {
-        if (!lessonData || typeof lessonData !== "object") {
-          return res.status(400).json({ error: "Missing lessonData" });
-        }
+      const courseColIdx = headers.indexOf("course");
+      const lessonColIdx = headers.indexOf("lesson");
 
-        // Normalize URLs
-        const videoUrl = normalizeVideoUrl(lessonData.videoUrl);
-        const mediaUrls = sanitizeMediaUrls(lessonData.mediaUrls);
-        
-        // Prepare the new row matching the exact headers order
-        const newRow = headers.map(h => {
-          if (h === "course") return String(lessonData.course || course || "").trim();
-          if (h === "lesson") return String(lessonData.lesson || "").trim();
-          if (h === "title") return String(lessonData.title || "").trim();
-          if (h === "description") return String(lessonData.description || "").trim();
-          if (h === "duration") return String(lessonData.duration || "").trim();
-          if (h === "level") return String(lessonData.level || "").trim();
-          if (h === "thumbnailUrl") return String(lessonData.thumbnailUrl || "").trim();
+      if (courseColIdx === -1 || lessonColIdx === -1) {
+        return errResponse(res, 400, {
+          error: "Tab Lessons thiếu cột 'course' hoặc 'lesson'",
+          extra: { headers },
+        });
+      }
+
+      // ── BUILD ROW from lessonData ─────────────────────────────────────────
+      const buildRow = (data, existingRow = null) => {
+        const videoUrl = normalizeVideoUrl(data.videoUrl);
+        const mediaUrls = sanitizeMediaUrls(data.mediaUrls);
+        return headers.map((h, colIdx) => {
+          if (h === "course") return String(data.course || "").trim();
+          if (h === "lesson") return String(data.lesson || "").trim();
+          if (h === "title") return String(data.title || "").trim();
+          if (h === "description") return String(data.description || "").trim();
+          if (h === "duration") return String(data.duration || "").trim();
+          if (h === "level") return String(data.level || "").trim();
+          if (h === "thumbnailUrl") return String(data.thumbnailUrl || "").trim();
           if (h === "videoUrl") return videoUrl;
+          if (h === "recipeUrl") return String(data.recipeUrl || "").trim();
           if (h === "mediaUrls") return mediaUrls;
-          if (h === "recipeUrl") return String(lessonData.recipeUrl || "").trim();
-          if (h === "status") return String(lessonData.status || "active").trim();
-          
-          // For any other columns, set empty string
+          if (h === "status") {
+            return String(
+              data.status || (existingRow ? String(existingRow[colIdx] || "") : "active")
+            ).trim();
+          }
+          // Preserve existing value for unknown custom columns
+          if (existingRow && existingRow[colIdx] !== undefined) {
+            return String(existingRow[colIdx]);
+          }
           return "";
         });
+      };
+
+      // ── ACTION: CREATE ────────────────────────────────────────────────────
+      if (action === "create") {
+        if (!lessonData || typeof lessonData !== "object") {
+          return errResponse(res, 400, { error: "Thiếu dữ liệu lessonData" });
+        }
+        const newRow = buildRow({ ...lessonData, status: "active" });
 
         await sheets.spreadsheets.values.append({
           spreadsheetId,
           range: "Lessons!A:A",
           valueInputOption: "RAW",
-          requestBody: {
-            values: [newRow]
-          }
+          requestBody: { values: [newRow] },
         });
 
         return res.status(200).json({ success: true, message: "Tạo bài học thành công" });
       }
 
-      // 2. UPDATE LESSON
+      // ── ACTION: UPDATE ────────────────────────────────────────────────────
       if (action === "update") {
         if (!originalCourse || !originalLesson) {
-          return res.status(400).json({ error: "Missing originalCourse or originalLesson to identify the row" });
+          return errResponse(res, 400, {
+            error: "Thiếu originalCourse hoặc originalLesson",
+            hint: "Cần để tìm đúng dòng bài học cần sửa.",
+          });
         }
         if (!lessonData || typeof lessonData !== "object") {
-          return res.status(400).json({ error: "Missing lessonData" });
+          return errResponse(res, 400, { error: "Thiếu dữ liệu lessonData" });
         }
 
-        // Find row index (1-based, plus 1 for headers)
-        let foundRowIndex = -1;
-        const courseColIdx = headers.indexOf("course");
-        const lessonColIdx = headers.indexOf("lesson");
-
-        for (let i = 1; i < lessonRows.length; i++) {
-          const row = lessonRows[i];
+        // Find the row
+        let foundRowIdx = -1; // 1-based spreadsheet row index
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
           if (
             String(row[courseColIdx] || "").trim() === String(originalCourse).trim() &&
             String(row[lessonColIdx] || "").trim() === String(originalLesson).trim()
           ) {
-            foundRowIndex = i + 1; // 1-based index
+            foundRowIdx = i + 1;
             break;
           }
         }
 
-        if (foundRowIndex === -1) {
-          return adminError(res, 404, "Không tìm thấy bài học cần sửa", new Error("Lesson row not found for update"), {
-            api: "admin-lessons",
-            action: "update",
-            course: originalCourse,
-            lesson: originalLesson,
-            instruction: "Kiểm tra course và lesson."
+        if (foundRowIdx === -1) {
+          return errResponse(res, 404, {
+            error: "Không tìm thấy bài học cần cập nhật",
+            extra: { originalCourse, originalLesson },
+            hint: "Kiểm tra lại course slug và số bài.",
           });
         }
 
-        // Keep all existing column data to avoid breaking custom fields, and update the edited ones
-        const existingRow = lessonRows[foundRowIndex - 1];
-        const videoUrl = normalizeVideoUrl(lessonData.videoUrl);
-
-        const updatedRow = headers.map((h, colIdx) => {
-          if (h === "course") return String(lessonData.course || originalCourse || "").trim();
-          if (h === "lesson") return String(lessonData.lesson || "").trim();
-          if (h === "title") return String(lessonData.title || "").trim();
-          if (h === "description") return String(lessonData.description || "").trim();
-          if (h === "duration") return String(lessonData.duration || "").trim();
-          if (h === "level") return String(lessonData.level || "").trim();
-          if (h === "thumbnailUrl") return String(lessonData.thumbnailUrl || "").trim();
-          if (h === "videoUrl") return videoUrl;
-          if (h === "mediaUrls") return sanitizeMediaUrls(lessonData.mediaUrls);
-          if (h === "recipeUrl") return String(lessonData.recipeUrl || "").trim();
-          if (h === "status") return String(lessonData.status || existingRow[colIdx] || "active").trim();
-          
-          // Return existing value for other/custom columns to preserve them
-          return existingRow[colIdx] !== undefined ? String(existingRow[colIdx]) : "";
-        });
+        const existingRow = rows[foundRowIdx - 1];
+        const updatedRow = buildRow(lessonData, existingRow);
 
         await sheets.spreadsheets.values.update({
           spreadsheetId,
-          range: `Lessons!A${foundRowIndex}`,
+          range: `Lessons!A${foundRowIdx}`,
           valueInputOption: "RAW",
-          requestBody: {
-            values: [updatedRow]
-          }
+          requestBody: { values: [updatedRow] },
         });
 
         return res.status(200).json({ success: true, message: "Cập nhật bài học thành công" });
       }
 
-      // 3. DELETE LESSON
+      // ── ACTION: DELETE ────────────────────────────────────────────────────
       if (action === "delete") {
-        const targetCourse = course;
-        const targetLesson = lesson;
-
-        if (!targetCourse || !targetLesson) {
-          return res.status(400).json({ error: "Missing course or lesson parameter for delete" });
+        if (!course || !lesson) {
+          return errResponse(res, 400, {
+            error: "Thiếu tham số course hoặc lesson",
+          });
         }
 
-        let foundRowIndex = -1;
-        const courseColIdx = headers.indexOf("course");
-        const lessonColIdx = headers.indexOf("lesson");
-
-        for (let i = 1; i < lessonRows.length; i++) {
-          const row = lessonRows[i];
+        let foundRowIdx = -1;
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
           if (
-            String(row[courseColIdx] || "").trim() === String(targetCourse).trim() &&
-            String(row[lessonColIdx] || "").trim() === String(targetLesson).trim()
+            String(row[courseColIdx] || "").trim() === String(course).trim() &&
+            String(row[lessonColIdx] || "").trim() === String(lesson).trim()
           ) {
-            foundRowIndex = i + 1; // 1-based index
+            foundRowIdx = i + 1;
             break;
           }
         }
 
-        if (foundRowIndex === -1) {
-          return adminError(res, 404, "Không tìm thấy bài học cần xóa", new Error("Lesson row not found for delete"), {
-            api: "admin-lessons",
-            action: "delete",
-            course: targetCourse,
-            lesson: targetLesson,
-            instruction: "Kiểm tra course và lesson."
+        if (foundRowIdx === -1) {
+          return errResponse(res, 404, {
+            error: "Không tìm thấy bài học cần xóa",
+            extra: { course, lesson },
           });
         }
 
         const statusColIdx = headers.indexOf("status");
+
         if (statusColIdx !== -1) {
-          // If status column exists, set it to "hidden"
-          const rowIndex = foundRowIndex;
-          const existingRow = lessonRows[rowIndex - 1];
-          const updatedRow = [...existingRow];
-          updatedRow[statusColIdx] = "hidden";
+          // Soft delete: set status = "hidden"
+          const existingRow = [...(rows[foundRowIdx - 1] || [])];
+          existingRow[statusColIdx] = "hidden";
 
           await sheets.spreadsheets.values.update({
             spreadsheetId,
-            range: `Lessons!A${rowIndex}`,
+            range: `Lessons!A${foundRowIdx}`,
             valueInputOption: "RAW",
-            requestBody: {
-              values: [updatedRow]
-            }
+            requestBody: { values: [existingRow] },
           });
-          return res.status(200).json({ success: true, message: "Đã ẩn bài học (đặt status=hidden)" });
+          return res.status(200).json({
+            success: true,
+            message: "Đã ẩn bài học (status = hidden)",
+          });
         } else {
-          // If no status column, delete row entirely from the sheet
-          const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
-          const sheet = spreadsheet.data.sheets.find(s => s.properties.title === "Lessons");
-          if (!sheet) {
-            return adminError(res, 500, "Không tìm thấy tab Lessons trong spreadsheet", new Error("Missing Lessons sheet"), {
-              api: "admin-lessons",
-              sheet: "Lessons"
-            });
-          }
-          const sheetId = sheet.properties.sheetId;
-
-          await sheets.spreadsheets.batchUpdate({
-            spreadsheetId,
-            requestBody: {
-              requests: [
-                {
-                  deleteDimension: {
-                    range: {
-                      sheetId,
-                      dimension: "ROWS",
-                      startIndex: foundRowIndex - 1, // 0-based inclusive
-                      endIndex: foundRowIndex        // 0-based exclusive
-                    }
-                  }
-                }
-              ]
-            }
+          // No status column — refuse physical delete to prevent data loss
+          return errResponse(res, 400, {
+            error: "Tab Lessons không có cột 'status' nên không thể ẩn bài an toàn.",
+            hint: "Thêm cột 'status' vào tab Lessons để hỗ trợ ẩn bài. Hiện chưa hỗ trợ xóa vật lý để tránh mất dữ liệu.",
           });
-
-          return res.status(200).json({ success: true, message: "Đã xóa bài học khỏi Sheet" });
         }
       }
 
-      return res.status(400).json({ error: "Invalid action" });
+      return errResponse(res, 400, { error: `action '${action}' không hợp lệ` });
     }
 
-    return res.status(405).json({ error: "Method not allowed" });
-
+    return res.status(405).json({ success: false, error: "Method not allowed" });
   } catch (err) {
-    return adminError(res, 500, "Admin lessons API thất bại", err, {
-      api: "admin-lessons",
-      method: req.method,
-      action: req.body?.action || "",
-      course: req.body?.course || req.query?.course || "",
-      lesson: req.body?.lesson || ""
+    console.error("[admin-lessons] Unexpected error:", err);
+
+    // Detect permission errors
+    const isPermError =
+      err.message?.includes("PERMISSION_DENIED") ||
+      err.message?.includes("403") ||
+      err.code === 403;
+
+    return errResponse(res, 500, {
+      error: isPermError
+        ? "Service Account không có quyền ghi Google Sheet"
+        : "Lỗi server trong admin-lessons",
+      message: err.message,
+      hint: isPermError
+        ? `Vào Google Sheet và cấp quyền Editor cho: ${process.env.GOOGLE_CLIENT_EMAIL || "(chưa cấu hình)"}`
+        : "Kiểm tra logs Vercel để biết chi tiết.",
+      extra: {
+        serviceEmail: process.env.GOOGLE_CLIENT_EMAIL || "(not set)",
+        sheetId: process.env.GOOGLE_SHEET_ID || "(not set)",
+      },
     });
   }
 }

@@ -1,183 +1,164 @@
-import { getSheetsClient, getAdminEmailFromRequest, adminError } from "./admin-utils.js";
+// api/admin-courses.js — REBUILT CLEAN 2026-06-07
+// Purpose: Read course list and manage Config tab in Google Sheet.
+// Uses Service Account (Sheets only). No Drive/Docs involved.
+
+import { getAdminFromRequest, getSheetsClient, errResponse } from "./admin-utils.js";
 
 export default async function handler(req, res) {
   try {
-    const adminEmail = await getAdminEmailFromRequest(req);
-    if (!adminEmail) {
-      return adminError(res, 401, "Unauthorized: Admin access required", new Error("Unauthorized"), {
-        api: "admin-courses"
+    // ── Auth check ────────────────────────────────────────────────────────────
+    const adminSession = getAdminFromRequest(req);
+    if (!adminSession) {
+      return errResponse(res, 401, {
+        error: "Chưa đăng nhập admin",
+        hint: "Vui lòng đăng nhập lại.",
       });
     }
 
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
     if (!spreadsheetId) {
-      return adminError(res, 500, "Missing GOOGLE_SHEET_ID in environment", new Error("Missing GOOGLE_SHEET_ID"), {
-        api: "admin-courses"
+      return errResponse(res, 500, {
+        error: "Thiếu GOOGLE_SHEET_ID trong cấu hình Vercel",
+        hint: "Thêm biến môi trường GOOGLE_SHEET_ID.",
       });
     }
 
     const sheets = await getSheetsClient();
 
+    // ── GET: Read courses list + Config ───────────────────────────────────────
     if (req.method === "GET") {
-      // 1. Get unique course slugs from Lessons
+      // 1. Get unique course slugs from Lessons tab
       let courses = [];
       try {
-        const lessonRowsResult = await sheets.spreadsheets.values.get({
+        const result = await sheets.spreadsheets.values.get({
           spreadsheetId,
-          range: "Lessons!A:Z"
+          range: "Lessons!A:A",
         });
-        const lessonRows = lessonRowsResult.data.values || [];
-        if (lessonRows.length >= 2) {
-          const headers = lessonRows[0].map(h => String(h).trim().toLowerCase());
-          const courseColIdx = headers.indexOf("course");
-          if (courseColIdx !== -1) {
-            const slugs = new Set();
-            for (let i = 1; i < lessonRows.length; i++) {
-              const row = lessonRows[i];
-              if (row[courseColIdx]) {
-                slugs.add(String(row[courseColIdx]).trim());
-              }
-            }
-            courses = Array.from(slugs);
+        const rows = result.data.values || [];
+        if (rows.length >= 2) {
+          // rows[0] is the header row, skip it
+          const slugSet = new Set();
+          for (let i = 1; i < rows.length; i++) {
+            const slug = String(rows[i][0] || "").trim();
+            if (slug) slugSet.add(slug);
           }
+          courses = Array.from(slugSet);
         }
       } catch (err) {
-        console.warn("Could not read courses from Lessons sheet:", err.message);
+        console.warn("[admin-courses] Could not read Lessons tab:", err.message);
+        // Provide sensible defaults so the UI still works
+        courses = ["banh-mi"];
       }
 
-      // If no courses found, default to some standard ones
-      if (courses.length === 0) {
-        courses = ["banh-mi", "donut", "thach-rau-cau"];
-      }
-
-      // 2. Read all config from Config tab
+      // 2. Read Config tab (key/value pairs)
       let config = {};
       try {
-        const configRowsResult = await sheets.spreadsheets.values.get({
+        const result = await sheets.spreadsheets.values.get({
           spreadsheetId,
-          range: "Config!A:B"
+          range: "Config!A:B",
         });
-        const configRows = configRowsResult.data.values || [];
-        configRows.forEach(row => {
-          if (row[0]) {
-            config[String(row[0]).trim()] = row[1] ? String(row[1]).trim() : "";
-          }
-        });
+        const rows = result.data.values || [];
+        for (const row of rows) {
+          if (row[0]) config[String(row[0]).trim()] = String(row[1] || "").trim();
+        }
       } catch (err) {
-        console.warn("Could not read Config sheet:", err.message);
+        console.warn("[admin-courses] Could not read Config tab:", err.message);
       }
 
-      return res.status(200).json({ courses, config });
+      return res.status(200).json({ success: true, courses, config });
     }
 
+    // ── POST: Update Config ───────────────────────────────────────────────────
     if (req.method === "POST") {
       const { action, course, config: newConfig } = req.body || {};
 
       if (action !== "updateConfig") {
-        return res.status(400).json({ error: "Invalid action" });
+        return errResponse(res, 400, { error: "action không hợp lệ" });
       }
-
       if (!course) {
-        return res.status(400).json({ error: "Missing course parameter" });
+        return errResponse(res, 400, { error: "Thiếu tham số course" });
       }
-
       if (!newConfig || typeof newConfig !== "object") {
-        return res.status(400).json({ error: "Missing or invalid config object" });
+        return errResponse(res, 400, { error: "Thiếu dữ liệu config" });
       }
 
-      // Read current Config tab
-      const configRowsResult = await sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: "Config!A:B"
-      });
-      const configRows = configRowsResult.data.values || [];
+      // Read current Config rows
+      let configRows = [];
+      try {
+        const result = await sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: "Config!A:B",
+        });
+        configRows = result.data.values || [];
+      } catch (err) {
+        return errResponse(res, 500, {
+          error: "Không đọc được tab Config",
+          message: err.message,
+        });
+      }
 
-      // We will update Config keys.
-      // For each key-value pair in newConfig (e.g. title, subtitle, heroImage),
-      // we check:
-      // 1. Is there a `${course}_${key}` in the sheet? If yes, update it.
-      // 2. Is there a `${key}` in the sheet? If yes, update it.
-      // 3. Otherwise, append a new row for `${course}_${key}` (or `${key}`).
-      
-      const keysToUpdate = Object.keys(newConfig);
+      // Build a map of key → row index (1-based)
+      const keyToRow = {};
+      for (let i = 0; i < configRows.length; i++) {
+        const key = String(configRows[i][0] || "").trim();
+        if (key) keyToRow[key] = i + 1;
+      }
 
-      for (const key of keysToUpdate) {
-        const val = String(newConfig[key] || "").trim();
-        const coursePrefixedKey = `${course}_${key}`;
+      // Determine if we should use prefixed keys (e.g., "banh-mi_title") or global
+      const hasPrefixedKeys = Object.keys(keyToRow).some((k) => k.includes("_"));
 
-        // Find index in configRows
-        let foundIndex = -1; // 0-based index of configRows
-        let foundKeyName = "";
+      for (const [field, value] of Object.entries(newConfig)) {
+        const prefixedKey = `${course}_${field}`;
+        const globalKey = field;
+        const val = String(value || "").trim();
 
-        for (let i = 0; i < configRows.length; i++) {
-          const rowKey = String(configRows[i][0] || "").trim();
-          if (rowKey === coursePrefixedKey) {
-            foundIndex = i;
-            foundKeyName = coursePrefixedKey;
-            break;
-          }
-        }
+        // Try prefixed key first, then global key
+        const targetKey =
+          keyToRow[prefixedKey] !== undefined
+            ? prefixedKey
+            : keyToRow[globalKey] !== undefined && !hasPrefixedKeys
+            ? globalKey
+            : hasPrefixedKeys
+            ? prefixedKey
+            : globalKey;
 
-        // If prefixed key not found, check for global key
-        if (foundIndex === -1) {
-          for (let i = 0; i < configRows.length; i++) {
-            const rowKey = String(configRows[i][0] || "").trim();
-            if (rowKey === key) {
-              foundIndex = i;
-              foundKeyName = key;
-              break;
-            }
-          }
-        }
+        const existingRow = keyToRow[targetKey];
 
-        if (foundIndex !== -1) {
-          // Update existing cell
-          const rowIndex = foundIndex + 1; // 1-based row index for Sheets range
+        if (existingRow !== undefined) {
+          // Update existing row
           await sheets.spreadsheets.values.update({
             spreadsheetId,
-            range: `Config!B${rowIndex}`,
+            range: `Config!B${existingRow}`,
             valueInputOption: "RAW",
-            requestBody: {
-              values: [[val]]
-            }
+            requestBody: { values: [[val]] },
           });
-          // Update in-memory copy for subsequent keys
-          configRows[foundIndex][1] = val;
         } else {
-          // Append new key. If the config already has some global titles,
-          // let's create a prefixed key to avoid overwriting global ones if multiple courses are active.
-          // However, if the sheet seems to use only global keys, we can append `${key}`.
-          // Let's check if there are any other course-prefixed keys in the sheet.
-          const hasPrefixedKeys = configRows.some(row => 
-            row[0] && row[0].includes("_") && !row[0].startsWith("_")
-          );
-
-          const finalKeyToAppend = hasPrefixedKeys ? coursePrefixedKey : key;
-          
+          // Append new row
           await sheets.spreadsheets.values.append({
             spreadsheetId,
             range: "Config!A:B",
             valueInputOption: "RAW",
-            requestBody: {
-              values: [[finalKeyToAppend, val]]
-            }
+            requestBody: { values: [[targetKey, val]] },
           });
-
-          // Update in-memory copy
-          configRows.push([finalKeyToAppend, val]);
+          configRows.push([targetKey, val]);
+          keyToRow[targetKey] = configRows.length;
         }
       }
 
       return res.status(200).json({ success: true });
     }
 
-    return res.status(405).json({ error: "Method not allowed" });
-
+    return res.status(405).json({ success: false, error: "Method not allowed" });
   } catch (err) {
-    return adminError(res, 500, "Admin courses API thất bại", err, {
-      api: "admin-courses",
-      method: req.method,
-      action: req.body?.action || ""
+    console.error("[admin-courses] Unexpected error:", err);
+    return errResponse(res, 500, {
+      error: "Lỗi server trong admin-courses",
+      message: err.message,
+      hint: "Kiểm tra Service Account có quyền Editor trên Google Sheet không.",
+      extra: {
+        serviceEmail: process.env.GOOGLE_CLIENT_EMAIL || "(not set)",
+        sheetId: process.env.GOOGLE_SHEET_ID || "(not set)",
+      },
     });
   }
 }

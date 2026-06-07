@@ -1,57 +1,102 @@
+// api/admin-auth.js — REBUILT CLEAN 2026-06-07
+// Purpose: Verify Google ID token, check ADMIN_EMAILS, issue admin session.
+// Does NOT touch Drive or Docs. No OAuth flow here.
+
 import {
-  ADMIN_EMAILS,
-  getAdminEmailFromRequest,
-  verifyAdminGoogleAccessToken,
-  adminError
+  verifyGoogleIdToken,
+  verifyAdminSession,
+  createAdminSession,
+  isAdminEmail,
+  normalizeEmail,
+  cookieOptions,
+  parseCookies,
+  errResponse,
 } from "./admin-utils.js";
 
-const REQUIRED_DRIVE_SCOPES = [
-  "https://www.googleapis.com/auth/drive.file",
-  "https://www.googleapis.com/auth/documents"
-];
+const ADMIN_SESSION_COOKIE = "admin_session_token";
 
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ success: false, error: "Method not allowed" });
+  }
+
   try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
+    const { credential, sessionToken } = req.body || {};
+    const cookies = parseCookies(req);
+    const existingToken = sessionToken || cookies[ADMIN_SESSION_COOKIE];
 
-    const adminEmail = await getAdminEmailFromRequest(req);
-    if (!adminEmail) {
-      return adminError(res, 401, "Unauthorized: Admin access required", new Error("Unauthorized"), {
-        api: "admin-drive-auth"
+    // ── 1. Restore existing session ──────────────────────────────────────────
+    if (existingToken && !credential) {
+      const session = verifyAdminSession(existingToken);
+      if (session) {
+        return res.status(200).json({
+          success: true,
+          email: session.email,
+          sessionToken: existingToken,
+          sessionExpiresAt: session.expiresAt,
+        });
+      }
+      // Clear expired/invalid cookie
+      res.setHeader("Set-Cookie", `${ADMIN_SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`);
+      return errResponse(res, 401, {
+        error: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn",
+        hint: "Vui lòng đăng nhập lại bằng Google.",
       });
     }
 
-    const { accessToken } = req.body || {};
-    const tokenInfo = await verifyAdminGoogleAccessToken(accessToken, adminEmail);
-    const missingScopes = REQUIRED_DRIVE_SCOPES.filter(scope => !tokenInfo.scopes.includes(scope));
-
-    if (missingScopes.length > 0) {
-      return adminError(res, 403, "Bạn chưa cấp quyền Google Drive cho Admin CMS", new Error("Insufficient Google OAuth scopes"), {
-        api: "admin-drive-auth",
-        email: tokenInfo.email || adminEmail,
-        requiredScopes: REQUIRED_DRIVE_SCOPES,
-        grantedScopes: tokenInfo.scopes,
-        missingScopes
+    // ── 2. New login via Google credential ───────────────────────────────────
+    if (!credential) {
+      return errResponse(res, 400, {
+        error: "Thiếu thông tin đăng nhập Google",
+        hint: "Vui lòng bấm nút Đăng nhập với Google.",
       });
     }
 
-    if (tokenInfo.email && !ADMIN_EMAILS.includes(tokenInfo.email)) {
-      return adminError(res, 403, "Gmail OAuth không nằm trong danh sách admin", new Error("Unauthorized OAuth email"), {
-        api: "admin-drive-auth",
-        email: tokenInfo.email
+    let email;
+    try {
+      email = await verifyGoogleIdToken(credential);
+    } catch (err) {
+      return errResponse(res, 400, {
+        error: "Không thể xác minh tài khoản Google",
+        message: err.message,
+        hint: "Kiểm tra GOOGLE_CLIENT_ID có khớp với token không.",
       });
     }
+
+    if (!email) {
+      return errResponse(res, 400, {
+        error: "Không lấy được email từ Google",
+      });
+    }
+
+    if (!isAdminEmail(email)) {
+      return errResponse(res, 403, {
+        error: "Tài khoản này không có quyền quản trị.",
+        extra: { email },
+        hint: `Thêm email vào biến môi trường ADMIN_EMAILS trên Vercel nếu cần.`,
+      });
+    }
+
+    // Issue session
+    const session = createAdminSession(email);
+    res.setHeader(
+      "Set-Cookie",
+      `${ADMIN_SESSION_COOKIE}=${encodeURIComponent(session.token)}; ${cookieOptions(
+        session.expiresAt - Date.now()
+      )}`
+    );
 
     return res.status(200).json({
       success: true,
-      email: tokenInfo.email || adminEmail,
-      scopes: tokenInfo.scopes
+      email,
+      sessionToken: session.token,
+      sessionExpiresAt: session.expiresAt,
     });
   } catch (err) {
-    return adminError(res, err.status || 500, "Xác thực Google Drive OAuth thất bại", err, {
-      api: "admin-drive-auth"
+    console.error("[admin-auth] Unexpected error:", err);
+    return errResponse(res, 500, {
+      error: "Lỗi server khi xác thực admin",
+      message: err.message,
     });
   }
 }
