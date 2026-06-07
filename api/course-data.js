@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 const SESSION_DAYS = Number(process.env.SESSION_DAYS || 30);
 const SESSION_COOKIE = "course_session_token";
-const API_VERSION = "bunny-iframe-preserve-token-2026-06-06";
+const API_VERSION = "premium-bunny-stream-v1";
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -212,12 +212,12 @@ function extractIframeSrc(input) {
   return match?.[1] ? match[1].trim() : text;
 }
 
-function normalizeBunnyEmbedUrl(input) {
-  let text = extractIframeSrc(input).replace(/&amp;/g, "&").trim();
-  if (!text) return "";
+function parseBunnyVideoIdAndLibraryId(videoUrl) {
+  let src = extractIframeSrc(videoUrl).replace(/&amp;/g, "&").trim();
+  if (!src) return null;
 
   try {
-    const url = new URL(text);
+    const url = new URL(src);
     const host = url.hostname.replace(/^www\./, "");
 
     if (
@@ -225,41 +225,37 @@ function normalizeBunnyEmbedUrl(input) {
       host !== "iframe.mediadelivery.net" &&
       host !== "video.bunnycdn.com"
     ) {
-      return "";
+      return null;
     }
 
     const parts = url.pathname.split("/").filter(Boolean);
+    // Handles /embed/LIBRARY_ID/VIDEO_ID or /play/LIBRARY_ID/VIDEO_ID
     const mode = parts[0];
     const libraryId = parts[1];
     const videoId = parts[2];
 
     if ((mode !== "embed" && mode !== "play") || !libraryId || !videoId) {
-      return "";
+      return null;
     }
 
-    return `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
+    return { libraryId, videoId };
   } catch (err) {
-    return "";
+    // Fallback regex matching
+    const match = src.match(/(?:player|iframe)\.mediadelivery\.net\/embed\/([^/]+)\/([^/?#]+)/);
+    if (match) {
+      return { libraryId: match[1], videoId: match[2] };
+    }
+    const matchPlay = src.match(/(?:player|iframe)\.mediadelivery\.net\/play\/([^/]+)\/([^/?#]+)/);
+    if (matchPlay) {
+      return { libraryId: matchPlay[1], videoId: matchPlay[2] };
+    }
+    return null;
   }
 }
 
-function getBunnyEmbedParts(input) {
-  const normalized = normalizeBunnyEmbedUrl(input);
-  if (!normalized) return null;
-
-  const match = normalized.match(/(?:player|iframe)\.mediadelivery\.net\/embed\/([^/]+)\/([^/?#]+)/);
-  if (!match) return null;
-
-  return {
-    libraryId: match[1],
-    videoId: match[2],
-    normalizedUrl: normalized
-  };
-}
-
 function signBunnyEmbedUrl(videoUrl) {
-  const parts = getBunnyEmbedParts(videoUrl);
-  if (!parts) {
+  const parsed = parseBunnyVideoIdAndLibraryId(videoUrl);
+  if (!parsed) {
     return {
       secureVideoUrl: videoUrl || "",
       videoProvider: "",
@@ -267,27 +263,31 @@ function signBunnyEmbedUrl(videoUrl) {
     };
   }
 
+  const { libraryId, videoId } = parsed;
+  const normalizedVideoUrl = `https://player.mediadelivery.net/embed/${libraryId}/${videoId}`;
   const tokenKey = String(process.env.BUNNY_STREAM_TOKEN_KEY || "").trim();
+
   if (!tokenKey) {
     return {
       secureVideoUrl: "",
       videoProvider: "bunny_embed",
       videoAuthStatus: "missing_bunny_stream_token_key",
-      normalizedVideoUrl: parts.normalizedUrl
+      normalizedVideoUrl
     };
   }
 
+  // Token expires after 10 minutes (600 seconds)
   const expires = Math.floor(Date.now() / 1000) + 600;
   const token = crypto
     .createHash("sha256")
-    .update(`${tokenKey}${parts.videoId}${expires}`)
+    .update(`${tokenKey}${videoId}${expires}`)
     .digest("hex");
 
   return {
-    secureVideoUrl: `${parts.normalizedUrl}?token=${token}&expires=${expires}&v=${encodeURIComponent(API_VERSION)}`,
+    secureVideoUrl: `${normalizedVideoUrl}?token=${token}&expires=${expires}`,
     videoProvider: "bunny_embed",
     videoAuthStatus: "signed",
-    normalizedVideoUrl: parts.normalizedUrl,
+    normalizedVideoUrl,
     secureVideoExpiresAt: expires
   };
 }
