@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>CMS Quản Trị Khóa Học - Culinary Academy</title>
+
+  <!-- Google Fonts & Identity SDK -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://accounts.google.com/gsi/client"></script>
+
+  <!-- Tailwind Configuration for Cohesive Theme Colors -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brandCream: '#FCF8F2',
+            brandGreen: '#2A4B2A',
+            brandGreenLight: '#3E6B3E',
+            brandBrown: '#2D1914',
+            brandOrange: '#D96B27',
+            brandGray: '#F5EFEB',
+          },
+          fontFamily: {
+            sans: ['"Be Vietnam Pro"', 'sans-serif'],
+            serif: ['"Playfair Display"', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #FCF8F2;
+      color: #2D1914;
+      font-family: "Be Vietnam Pro", sans-serif;
+    }
+    .serif-title {
+      font-family: "Playfair Display", serif;
+    }
+    /* Smooth transitions */
+    .transition-all-200 {
+      transition: all 0.2s ease-in-out;
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FCF8F2;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D5C7B7;
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #BCAE9E;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-brandOrange selection:text-white">
+
+  <!-- OVERLAY LOADER -->
+  <div id="globalLoader" class="fixed inset-0 z-[100] bg-brandBrown/60 backdrop-blur-sm flex flex-col items-center justify-center text-white hidden">
+    <div class="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mb-4"></div>
+    <p class="font-bold text-sm sm:text-base" id="globalLoaderMessage">Đang xử lý...</p>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-[100] max-w-sm w-full space-y-3 pointer-events-none"></div>
+
+  <!-- MAIN CONTAINER -->
+  <div id="appContainer" class="flex-grow flex flex-col">
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginSection" class="flex-grow flex items-center justify-center px-4 py-12">
+      <div class="max-w-md w-full bg-white rounded-3xl p-8 border border-brandBrown/5 shadow-xl text-center relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brandOrange to-brandGreen"></div>
+        <div class="text-5xl mb-4">🍳</div>
+        <h2 class="serif-title text-3xl font-black text-brandGreen mb-2">Học Viện Culinary</h2>
+        <p class="text-brandBrown/60 text-sm mb-6">Hệ thống quản trị nội dung khóa học và tài liệu học tập dành cho Admin.</p>
+        
+        <!-- Google button placeholder -->
+        <div class="flex justify-center mb-6">
+          <div id="googleSignInBtn" class="min-h-[44px]"></div>
+        </div>
+
+        <div id="loginStatus" class="text-xs text-brandOrange font-semibold hidden"></div>
+      </div>
+    </div>
+
+    <!-- WORKSPACE SECTION -->
+    <div id="workspaceSection" class="hidden flex-grow flex flex-col">
+      <!-- Header -->
+      <header class="bg-white border-b border-brandBrown/5 shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span class="text-2xl">🍳</span>
+            <span class="font-extrabold tracking-tight text-lg sm:text-xl text-brandGreen">Culinary CMS</span>
+            <span class="hidden sm:inline px-2.5 py-0.5 rounded bg-brandOrange/10 text-brandOrange font-bold text-[10px] uppercase">Admin Panel</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="text-right hidden sm:block">
+              <span class="text-[10px] font-bold text-brandGreen block">QUẢN TRỊ VIÊN</span>
+              <span id="adminEmailBadge" class="text-xs text-brandBrown/60 font-semibold block">admin@gmail.com</span>
+            </div>
+            <button onclick="logoutAdmin()" class="px-3.5 py-2 bg-brandGray hover:bg-brandBrown/10 text-brandBrown font-bold text-xs rounded-xl transition duration-150">
+              Đăng xuất
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Columns -->
+      <div class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left Sidebar: Course Selection & Lesson Catalog -->
+        <div class="lg:col-span-4 space-y-6">
+          <!-- Course Config Card -->
+          <div class="bg-white border border-brandBrown/5 rounded-3xl p-5 shadow-sm space-y-4">
+            <h3 class="font-black text-brandGreen text-sm tracking-wider uppercase">1. Chọn Khóa Học</h3>
+            
+            <div class="space-y-3">
+              <label class="block text-xs font-bold text-brandBrown/70 uppercase">Khóa học hiện tại</label>
+              <select id="courseSelect" onchange="onCourseChanged()" class="w-full px-3 py-2.5 rounded-xl border border-brandBrown/15 text-sm bg-white focus:outline-none focus:border-brandGreen transition">
+                <!-- Appended dynamically -->
+              </select>
+            </div>
+
+            <!-- Create new course slug -->
+            <div class="pt-2 border-t border-brandGray flex items-center gap-2">
+              <input id="newCourseSlug" type="text" placeholder="slug-khoa-hoc-moi" class="flex-grow px-3 py-2 rounded-xl border border-brandBrown/15 text-xs focus:outline-none focus:border-brandGreen transition">
+              <button onclick="addNewCourseSlug()" class="px-3.5 py-2 bg-brandGreen hover:bg-brandGreenLight text-white rounded-xl font-bold text-xs shadow-sm transition">
+                Thêm
+              </button>
+            </div>
+
+            <!-- Edit Course Meta Data -->
+            <div class="pt-4 border-t border-brandGray space-y-3">
+              <h4 class="font-bold text-xs text-brandBrown/80">Cấu hình hiển thị khóa học</h4>
+              <div class="space-y-2">
+                <input id="courseMetaTitle" type="text" placeholder="Tên khóa học (ví dụ: Khóa học Bánh Mì)" class="w-full px-3 py-2 rounded-xl border border-brandBrown/15 text-xs focus:outline-none">
+                <input id="courseMetaSubtitle" type="text" placeholder="Phụ đề ngắn" class="w-full px-3 py-2 rounded-xl border border-brandBrown/15 text-xs focus:outline-none">
+                
+                <div class="space-y-1">
+                  <input id="courseMetaHeroImage" type="text" placeholder="Link ảnh banner (Hero Image)" class="w-full px-3 py-2 rounded-xl border border-brandBrown/15 text-xs focus:outline-none">
+                  <!-- Upload course banner -->
+                  <div class="flex items-center justify-between text-[10px]">
+                    <span class="text-brandBrown/50 font-medium">Hoặc tải ảnh lên:</span>
+                    <label class="text-brandOrange hover:underline cursor-pointer font-bold">
+                      Tải File Lên Drive
+                      <input type="file" accept="image/*" class="hidden" onchange="uploadFileToDrive(this, 'courseMetaHeroImage')">
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <button onclick="saveCourseMeta()" class="w-full py-2 bg-brandOrange hover:bg-brandOrange/95 text-white font-bold text-xs rounded-xl shadow-md shadow-brandOrange/15 transition">
+                Cập nhật cấu hình khóa học
+              </button>
+            </div>
+          </div>
+
+          <!-- Lesson List Card -->
+          <div class="bg-white border border-brandBrown/5 rounded-3xl p-5 shadow-sm flex flex-col min-h-[400px]">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-black text-brandGreen text-sm tracking-wider uppercase">2. Danh Sách Bài Học</h3>
+              <button onclick="initNewLessonForm()" class="px-3 py-1.5 bg-brandGreen hover:bg-brandGreenLight text-white font-bold text-xs rounded-xl shadow-sm transition">
+                + Thêm mới
+              </button>
+            </div>
+
+            <div id="lessonsListContainer" class="space-y-2.5 overflow-y-auto max-h-[500px] flex-grow pr-1">
+              <!-- Loaded dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side: Lesson Editor Panel -->
+        <div class="lg:col-span-8">
+          <div class="bg-white border border-brandBrown/5 rounded-3xl p-6 shadow-sm space-y-6">
+            <div class="flex items-center justify-between border-b border-brandGray pb-4">
+              <div>
+                <h2 class="serif-title text-xl sm:text-2xl font-black text-brandGreen" id="editorTitle">Thêm Bài Học Mới</h2>
+                <p class="text-xs text-brandBrown/55 font-medium" id="editorSub">Nhập các thông tin chi tiết bên dưới để xuất bản bài học.</p>
+              </div>
+              <span id="editorModeBadge" class="px-2.5 py-1 rounded-xl bg-brandGreen/10 text-brandGreen font-bold text-xs uppercase tracking-wider">
+                TẠO MỚI
+              </span>
+            </div>
+
+            <!-- Editor Form -->
+            <form id="lessonForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
+              
+              <!-- Basic fields grid -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Course slug (locked or matches dropdown) -->
+                <div class="space-y-1.5">
+                  <label class="block text-xs font-bold text-brandBrown/70 uppercase">Slug Khóa Học</label>
+                  <input type="text" id="lessonCourseSlug" readonly class="w-full px-3.5 py-2.5 rounded-xl border border-brandBrown/10 bg-brandGray text-brandBrown/65 font-bold text-sm focus:outline-none">
+                </div>
+
+                <!-- Lesson ordering number -->
+                <div class="space-y-1.5">
+                  <label class="block text-xs font-bold text-brandBrown/70 uppercase">Bài số (Lesson No.)</label>
+                  <input type="number" id="lessonNo" required min="1" placeholder="Ví dụ: 1" class="w-full px-3.5 py-2.5 rounded-xl border border-brandBrown/15 text-sm focus:outline-none focus:border-brandGreen transition">
+                </div>
+
+                <!-- Title -->
+                <div class="space-y-1.5 md:col-span-2">
+                  <label class="block text-xs font-bold text-brandBrown/70 uppercase">Tiêu đề bài học</label>
+                  <input type="text" id="lessonTitle" required placeholder="Ví dụ: Tổng quan lý thuyết bánh mì" class="w-full px-3.5 py-2.5 rounded-xl border border-brandBrown/15 text-sm focus:outline-none focus:border-brandGreen transition">
+                </div>
+
+                <!-- Description -->
+                <div class="space-y-1.5 md:col-span-2">
+                  <label class="block text-xs font-bold text-brandBrown/70 uppercase">Mô tả bài học</label>
+                  <textarea id="lessonDescription" rows="2" placeholder="Tóm tắt nội dung bài học..." class="w-full px-3.5 py-2.5 rounded-xl border border-brandBrown/15 text-sm focus:outline-none focus:border-brandGreen transition"></textarea>
+                </div>
+
+                <!-- Duration -->
+                <div class="space-y-1.5">
+                  <label class="block text-xs font-bold text-brandBrown/70 uppercase">Thời lượng (⏱)</label>
+                  <input type="text" id="lessonDuration" placeholder="Ví dụ: 15:30" class="w-full px-3.5 py-2.5 rounded-xl border border-brandBrown/15 text-sm focus:outline-none focus:border-brandGreen transition">
+                </div>
+
+                <!-- Level -->
+                <div class="space-y-1.5">
+                  <label class="block text-xs font-bold text-brandBrown/70 uppercase">Cấp độ (▥)</label>
+                  <select id="lessonLevel" class="w-full px-3.5 py-2.5 rounded-xl border border-brandBrown/15 text-sm bg-white focus:outline-none focus:border-brandGreen transition">
+                    <option value="Cơ bản">Cơ bản</option>
+                    <option value="Trung cấp">Trung cấp</option>
+                    <option value="Nâng cao">Nâng cao</option>
+                    <option value="Chuyên nghiệp">Chuyên nghiệp</option>
+                  </select>
+                </div>
+
+                <!-- Thumbnail -->
+                <div class="space-y-1.5 md:col-span-2">
+                  <label class="block text-xs font-bold text-brandBrown/70 uppercase">Link ảnh đại diện (Thumbnail URL)</label>
+                  <div class="flex items-center gap-2">
+                    <input type="text" id="lessonThumbnailUrl" placeholder="https://..." class="flex-grow px-3.5 py-2.5 rounded-xl border border-brandBrown/15 text-sm focus:outline-none focus:border-brandGreen transition">
+                    <label class="px-4 py-2.5 bg-brandOrange hover:bg-brandOrange/95 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition whitespace-nowrap flex items-center justify-center">
+                      Tải file
+                      <input type="file" accept="image/*" class="hidden" onchange="uploadFileToDrive(this, 'lessonThumbnailUrl')">
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Main Video URL -->
+                <div class="space-y-1.5 md:col-span-2">
+                  <label class="block text-xs font-bold text-brandBrown/70 uppercase">Video bài giảng chính (Bunny Stream / YouTube)</label>
+                  <div class="space-y-2">
+                    <div class="flex items-stretch gap-2">
+                      <input type="text" id="lessonVideoUrl" placeholder="Dán mã nhúng iframe Bunny hoặc link YouTube vào đây..." class="flex-grow px-3.5 py-2.5 rounded-xl border border-brandBrown/15 text-sm focus:outline-none focus:border-brandGreen transition">
+                      <button type="button" onclick="testAndCleanVideoUrl()" class="px-4 bg-brandGreen hover:bg-brandGreenLight text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap">
+                        Kiểm tra & Chuẩn hóa
+                      </button>
+                    </div>
+                    <!-- Warning / Success indicator -->
+                    <div id="videoUrlStatus" class="text-xs font-semibold hidden"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- FORMULA / RECIPE GENERATION SECTION -->
+              <div class="border-t border-brandGray pt-6 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-extrabold text-brandGreen text-sm uppercase tracking-wider">📄 CÔNG THỨC CHI TIẾT</h4>
+                  <span class="text-[10px] text-brandBrown/50 font-bold">Lưu thành Google Docs trên Drive</span>
+                </div>
+
+                <div class="space-y-3 bg-brandCream border border-brandBrown/5 p-4 rounded-2xl">
+                  <div class="space-y-1">
+                    <label class="block text-xs font-bold text-brandBrown/70">Nội dung công thức</label>
+                    <textarea id="recipeTextContent" rows="4" placeholder="Nhập văn bản công thức tại đây..." class="w-full px-3 py-2 rounded-xl border border-brandBrown/15 text-xs focus:outline-none"></textarea>
+                  </div>
+
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-2">
+                      <span class="text-brandBrown/50 font-medium">Hoặc tải file:</span>
+                      <input type="file" id="recipeFileInput" accept=".txt" class="text-xs text-brandBrown/60 max-w-[200px]" onchange="handleRecipeFileSelected(this)">
+                    </div>
+                    <button type="button" onclick="createGoogleDocFromRecipe()" class="px-4 py-2 bg-brandGreen hover:bg-brandGreenLight text-white font-bold text-xs rounded-xl shadow-sm transition">
+                      Tạo Google Docs từ công thức
+                    </button>
+                  </div>
+                </div>
+
+                <div class="space-y-1">
+                  <label class="block text-xs font-bold text-brandBrown/70 uppercase">Link tài liệu công thức (recipeUrl)</label>
+                  <div class="flex items-center gap-2">
+                    <input type="text" id="lessonRecipeUrl" placeholder="https://docs.google.com/document/d/..." class="flex-grow px-3.5 py-2.5 rounded-xl border border-brandBrown/15 text-sm focus:outline-none">
+                    <a id="recipeUrlOpenLink" href="#" target="_blank" class="px-3.5 py-2.5 bg-brandGray border border-brandBrown/10 text-brandBrown font-bold text-xs rounded-xl flex items-center justify-center hidden">
+                      Mở
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <!-- VISUAL MEDIA BLOCKS (mediaUrls) -->
+              <div class="border-t border-brandGray pt-6 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-extrabold text-brandGreen text-sm uppercase tracking-wider">🌾 TÀI LIỆU MEDIA PHỤ</h4>
+                  <button type="button" onclick="previewMediaUrls()" class="px-3 py-1 bg-brandOrange hover:bg-brandOrange/95 text-white font-bold text-[10px] rounded-lg shadow-sm transition">
+                    Xem trước mediaUrls
+                  </button>
+                </div>
+
+                <div class="space-y-3">
+                  <!-- Block List -->
+                  <div id="mediaBlocksContainer" class="space-y-4">
+                    <!-- Appended dynamically -->
+                  </div>
+
+                  <!-- Quick Add buttons -->
+                  <div class="flex flex-wrap gap-2 pt-2">
+                    <button type="button" onclick="addMediaBlock('video')" class="px-3 py-2 bg-brandGray hover:bg-brandBrown/10 text-brandGreen font-bold text-xs rounded-xl transition">
+                      + Thêm Video Bunny
+                    </button>
+                    <button type="button" onclick="addMediaBlock('youtube')" class="px-3 py-2 bg-brandGray hover:bg-brandBrown/10 text-brandGreen font-bold text-xs rounded-xl transition">
+                      + Thêm Video YouTube
+                    </button>
+                    <button type="button" onclick="addMediaBlock('image')" class="px-3 py-2 bg-brandGray hover:bg-brandBrown/10 text-brandGreen font-bold text-xs rounded-xl transition">
+                      + Thêm Ảnh Đẹp
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Hidden compiled field -->
+                <div class="hidden">
+                  <input type="text" id="lessonMediaUrls">
+                </div>
+              </div>
+
+              <!-- Save / Submit Footer -->
+              <div class="border-t border-brandGray pt-6 flex items-center justify-between gap-4">
+                <button type="button" onclick="initNewLessonForm()" class="px-4 py-3 bg-brandGray hover:bg-brandBrown/10 text-brandBrown font-bold text-sm rounded-xl transition">
+                  Đặt lại form
+                </button>
+                <button type="submit" class="px-8 py-3.5 bg-brandGreen hover:bg-brandGreenLight text-white font-bold text-sm rounded-xl shadow-lg shadow-brandGreen/25 hover:shadow-brandGreen/35 transition duration-200">
+                  Lưu bài học
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-brandBrown/5 py-6 mt-auto text-center text-xs text-brandBrown/40 font-medium">
+    <div class="max-w-7xl mx-auto px-4">
+      <p>© 2026 Culinary Academy CMS. Bảo lưu mọi quyền.</p>
+    </div>
+  </footer>
+
+  <!-- CORE SCRIPTS LOGIC -->
+  <script>
+    let isEditMode = false;
+    let originalCourse = "";
+    let originalLesson = "";
+    let googleClientId = "";
+    let currentLessonsList = [];
+
+    // Helper functions for alerts
+    function showToast(message, type = "success") {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = `p-4 rounded-2xl shadow-lg border text-sm font-bold transition duration-300 transform translate-y-2 opacity-0 flex items-center justify-between ${
+        type === "success" 
+          ? "bg-green-50 text-green-800 border-green-200" 
+          : "bg-red-50 text-red-800 border-red-200"
+      }`;
+      toast.innerHTML = `
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" class="ml-4 font-black text-xs opacity-75 hover:opacity-100">✕</button>
+      `;
+      container.appendChild(toast);
+      
+      // Animate in
+      setTimeout(() => {
+        toast.classList.remove("translate-y-2", "opacity-0");
+      }, 50);
+
+      // Auto remove
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-2");
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function showLoader(message = "Đang xử lý...") {
+      document.getElementById("globalLoaderMessage").innerText = message;
+      document.getElementById("globalLoader").classList.remove("hidden");
+    }
+
+    function hideLoader() {
+      document.getElementById("globalLoader").classList.add("hidden");
+    }
+
+    // Google Sign-In setup
+    async function initGoogleSignIn() {
+      try {
+        const res = await fetch("/api/public-config");
+        const config = await res.json();
+        googleClientId = config.googleClientId;
+
+        if (!googleClientId) {
+          document.getElementById("loginStatus").innerText = "Chưa cấu hình GOOGLE_CLIENT_ID";
+          document.getElementById("loginStatus").classList.remove("hidden");
+          return;
+        }
+
+        google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleGoogleLoginResponse
+        });
+
+        google.accounts.id.renderButton(
+          document.getElementById("googleSignInBtn"),
+          { theme: "outline", size: "large", text: "signin_with", shape: "pill" }
+        );
+
+        // Try restoring session
+        const token = localStorage.getItem("admin_session_token");
+        if (token) {
+          showLoader("Đang khôi phục phiên...");
+          await verifyAdminSession(token);
+        }
+
+      } catch (err) {
+        console.error("Failed to init Google client:", err);
+        document.getElementById("loginStatus").innerText = "Lỗi tải Google API";
+        document.getElementById("loginStatus").classList.remove("hidden");
+      }
+    }
+
+    async function handleGoogleLoginResponse(response) {
+      showLoader("Đang đăng nhập admin...");
+      try {
+        const res = await fetch("/api/admin-auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.allowed) {
+          localStorage.setItem("admin_session_token", data.sessionToken);
+          enterAdminWorkspace(data.email);
+          showToast("Đăng nhập Admin thành công!");
+        } else {
+          localStorage.removeItem("admin_session_token");
+          showToast(data.error || "Tài khoản không có quyền quản trị.", "error");
+        }
+      } catch (err) {
+        showToast("Đăng nhập thất bại. Vui lòng thử lại.", "error");
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function verifyAdminSession(token) {
+      try {
+        const res = await fetch("/api/admin-auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionToken: token })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.allowed) {
+          enterAdminWorkspace(data.email);
+        } else {
+          localStorage.removeItem("admin_session_token");
+          showLoggedOutState();
+        }
+      } catch (err) {
+        localStorage.removeItem("admin_session_token");
+        showLoggedOutState();
+      } finally {
+        hideLoader();
+      }
+    }
+
+    function enterAdminWorkspace(email) {
+      document.getElementById("adminEmailBadge").innerText = email;
+      document.getElementById("loginSection").classList.add("hidden");
+      document.getElementById("workspaceSection").classList.remove("hidden");
+      
+      // Load initial lists
+      loadCoursesAndConfigs();
+    }
+
+    function showLoggedOutState() {
+      document.getElementById("workspaceSection").classList.add("hidden");
+      document.getElementById("loginSection").classList.remove("hidden");
+    }
+
+    function logoutAdmin() {
+      localStorage.removeItem("admin_session_token");
+      // Set expired cookie
+      document.cookie = "admin_session_token=; Path=/; Max-Age=0; SameSite=Lax";
+      location.reload();
+    }
+
+    // Load list of courses and global config values
+    async function loadCoursesAndConfigs() {
+      showLoader("Đang tải dữ liệu khóa học...");
+      try {
+        const res = await fetch("/api/admin-courses", {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("admin_session_token")}`
+          }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          populateCoursesSelect(data.courses);
+          window.globalConfig = data.config || {};
+          onCourseChanged(); // Trigger lessons load
+        } else {
+          showToast(data.error || "Không thể tải cấu hình khóa học", "error");
+        }
+      } catch (err) {
+        showToast("Lỗi tải thông tin khóa học", "error");
+      } finally {
+        hideLoader();
+      }
+    }
+
+    function populateCoursesSelect(courses) {
+      const select = document.getElementById("courseSelect");
+      select.innerHTML = "";
+      courses.forEach(c => {
+        const option = document.createElement("option");
+        option.value = c;
+        option.innerText = c;
+        select.appendChild(option);
+      });
+    }
+
+    function addNewCourseSlug() {
+      const input = document.getElementById("newCourseSlug");
+      const val = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
+      if (!val) return;
+
+      const select = document.getElementById("courseSelect");
+      // Check if exists
+      let exists = false;
+      for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === val) {
+          exists = true;
+          select.selectedIndex = i;
+          break;
+        }
+      }
+
+      if (!exists) {
+        const option = document.createElement("option");
+        option.value = val;
+        option.innerText = val;
+        select.appendChild(option);
+        select.value = val;
+      }
+
+      input.value = "";
+      onCourseChanged();
+    }
+
+    // When dropdown course changes, load course meta and lesson list
+    async function onCourseChanged() {
+      const course = document.getElementById("courseSelect").value;
+      if (!course) return;
+
+      document.getElementById("lessonCourseSlug").value = course;
+
+      // Populate course metadata fields from globalConfig
+      const titleKey = `${course}_title`;
+      const subtitleKey = `${course}_subtitle`;
+      const heroKey = `${course}_heroImage`;
+
+      document.getElementById("courseMetaTitle").value = window.globalConfig[titleKey] || window.globalConfig["title"] || "";
+      document.getElementById("courseMetaSubtitle").value = window.globalConfig[subtitleKey] || window.globalConfig["subtitle"] || "";
+      document.getElementById("courseMetaHeroImage").value = window.globalConfig[heroKey] || window.globalConfig["heroImage"] || "";
+
+      // Fetch lessons for this course
+      await loadLessonsList(course);
+    }
+
+    async function saveCourseMeta() {
+      const course = document.getElementById("courseSelect").value;
+      const title = document.getElementById("courseMetaTitle").value.trim();
+      const subtitle = document.getElementById("courseMetaSubtitle").value.trim();
+      const heroImage = document.getElementById("courseMetaHeroImage").value.trim();
+
+      if (!course) return;
+
+      showLoader("Đang lưu cấu hình khóa học...");
+      try {
+        const res = await fetch("/api/admin-courses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("admin_session_token")}`
+          },
+          body: JSON.stringify({
+            action: "updateConfig",
+            course,
+            config: { title, subtitle, heroImage }
+          })
+        });
+
+        if (res.ok) {
+          showToast("Cập nhật cấu hình khóa học thành công!");
+          // Update local copy
+          window.globalConfig[`${course}_title`] = title;
+          window.globalConfig[`${course}_subtitle`] = subtitle;
+          window.globalConfig[`${course}_heroImage`] = heroImage;
+        } else {
+          const errData = await res.json();
+          showToast(errData.error || "Không thể cập nhật cấu hình", "error");
+        }
+      } catch (err) {
+        showToast("Lỗi lưu cấu hình", "error");
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function loadLessonsList(course) {
+      const container = document.getElementById("lessonsListContainer");
+      container.innerHTML = `<p class="text-xs text-brandBrown/50 font-bold py-4 text-center">Đang tải danh sách bài học...</p>`;
+
+      try {
+        const res = await fetch(`/api/admin-lessons?course=${encodeURIComponent(course)}`);
+        const data = await res.json();
+
+        if (res.ok) {
+          currentLessonsList = data.lessons || [];
+          renderLessonsList(currentLessonsList);
+        } else {
+          container.innerHTML = `<p class="text-xs text-red-500 font-bold py-4 text-center">Lỗi tải danh sách.</p>`;
+        }
+      } catch (e) {
+        container.innerHTML = `<p class="text-xs text-red-500 font-bold py-4 text-center">Lỗi kết nối.</p>`;
+      }
+    }
+
+    function renderLessonsList(lessons) {
+      const container = document.getElementById("lessonsListContainer");
+      container.innerHTML = "";
+
+      if (lessons.length === 0) {
+        container.innerHTML = `<p class="text-xs text-brandBrown/40 font-bold py-8 text-center">Chưa có bài học nào.</p>`;
+        return;
+      }
+
+      lessons.forEach((l, idx) => {
+        const item = document.createElement("div");
+        item.className = "p-3 rounded-2xl border border-brandBrown/5 hover:border-brandGreen/30 bg-brandCream shadow-inner flex items-center justify-between gap-3 transition cursor-pointer";
+        item.onclick = () => loadLessonToEditor(idx);
+
+        const isHidden = String(l.status || "").trim().toLowerCase() === "hidden";
+
+        item.innerHTML = `
+          <div class="min-w-0 flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded bg-brandGreen/10 text-brandGreen font-bold text-[10px]">BÀI ${l.lesson || idx+1}</span>
+            <span class="font-bold text-xs text-brandBrown truncate ${isHidden ? 'line-through opacity-50' : ''}">${l.title || "Không tiêu đề"}</span>
+            ${isHidden ? '<span class="text-[9px] text-red-500 font-black uppercase tracking-wider">ẨN</span>' : ''}
+          </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0" onclick="event.stopPropagation()">
+            <button onclick="deleteLesson('${l.course}', '${l.lesson}')" class="p-1 hover:bg-red-50 text-red-500 rounded transition" title="Xóa hoặc ẩn bài">
+              ✕
+            </button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // Initialize/Reset the Lesson Form for creating a new lesson
+    function initNewLessonForm() {
+      isEditMode = false;
+      originalCourse = "";
+      originalLesson = "";
+
+      document.getElementById("editorTitle").innerText = "Thêm Bài Học Mới";
+      document.getElementById("editorSub").innerText = "Nhập các thông tin chi tiết bên dưới để xuất bản bài học.";
+      document.getElementById("editorModeBadge").innerText = "TẠO MỚI";
+      document.getElementById("editorModeBadge").className = "px-2.5 py-1 rounded-xl bg-brandGreen/10 text-brandGreen font-bold text-xs uppercase tracking-wider";
+
+      document.getElementById("lessonForm").reset();
+      
+      const course = document.getElementById("courseSelect").value;
+      document.getElementById("lessonCourseSlug").value = course;
+
+      // Automatically suggest lesson number as length + 1
+      document.getElementById("lessonNo").value = currentLessonsList.length + 1;
+
+      // Clear media blocks
+      document.getElementById("mediaBlocksContainer").innerHTML = "";
+      document.getElementById("lessonMediaUrls").value = "";
+
+      // Hide URL Status messages
+      document.getElementById("videoUrlStatus").classList.add("hidden");
+      document.getElementById("recipeUrlOpenLink").classList.add("hidden");
+    }
+
+    function loadLessonToEditor(index) {
+      const l = currentLessonsList[index];
+      if (!l) return;
+
+      isEditMode = true;
+      originalCourse = l.course;
+      originalLesson = l.lesson;
+
+      document.getElementById("editorTitle").innerText = `Sửa Bài Học: ${l.title || l.lesson}`;
+      document.getElementById("editorSub").innerText = `Chỉnh sửa thông tin bài học số ${l.lesson}.`;
+      document.getElementById("editorModeBadge").innerText = "CHỈNH SỬA";
+      document.getElementById("editorModeBadge").className = "px-2.5 py-1 rounded-xl bg-brandOrange/10 text-brandOrange font-bold text-xs uppercase tracking-wider";
+
+      // Fill in details
+      document.getElementById("lessonCourseSlug").value = l.course;
+      document.getElementById("lessonNo").value = l.lesson;
+      document.getElementById("lessonTitle").value = l.title || "";
+      document.getElementById("lessonDescription").value = l.description || "";
+      document.getElementById("lessonDuration").value = l.duration || "";
+      document.getElementById("lessonLevel").value = l.level || "Cơ bản";
+      document.getElementById("lessonThumbnailUrl").value = l.thumbnailUrl || "";
+      document.getElementById("lessonVideoUrl").value = l.videoUrl || "";
+      document.getElementById("lessonRecipeUrl").value = l.recipeUrl || "";
+
+      if (l.recipeUrl) {
+        const link = document.getElementById("recipeUrlOpenLink");
+        link.href = l.recipeUrl;
+        link.classList.remove("hidden");
+      } else {
+        document.getElementById("recipeUrlOpenLink").classList.add("hidden");
+      }
+
+      // Populate media blocks from mediaUrls
+      const container = document.getElementById("mediaBlocksContainer");
+      container.innerHTML = "";
+      document.getElementById("lessonMediaUrls").value = l.mediaUrls || "";
+
+      if (l.mediaUrls) {
+        const blocks = l.mediaUrls.split("\n").filter(Boolean);
+        blocks.forEach(b => {
+          const parts = b.split("|");
+          const type = parts[0] || "video";
+          const title = parts[1] || "";
+          const url = parts[2] || "";
+          addMediaBlock(type, title, url);
+        });
+      }
+    }
+
+    // Media Visual Block logic
+    function addMediaBlock(type = "video", title = "", url = "") {
+      const container = document.getElementById("mediaBlocksContainer");
+      const blockId = "block_" + Math.random().toString(36).substring(2, 9);
+
+      const block = document.createElement("div");
+      block.className = "p-4 rounded-2xl border border-brandBrown/10 bg-[#FAF7F3] space-y-3 relative";
+      block.id = blockId;
+      block.dataset.type = type;
+
+      let typeBadge = "";
+      let typePlaceholder = "";
+      if (type === "video") {
+        typeBadge = '<span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-bold">BUNNY VIDEO</span>';
+        typePlaceholder = "Dán iframe code hoặc link Bunny Stream...";
+      } else if (type === "youtube") {
+        typeBadge = '<span class="px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200 text-[9px] font-bold">YOUTUBE VIDEO</span>';
+        typePlaceholder = "Dán link YouTube (watch, shorts, iframe)...";
+      } else if (type === "image") {
+        typeBadge = '<span class="px-2 py-0.5 rounded bg-green-50 text-green-700 border border-green-200 text-[9px] font-bold">ẢNH THÀNH PHẨM</span>';
+        typePlaceholder = "Dán link ảnh Drive hoặc upload file...";
+      }
+
+      block.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            ${typeBadge}
+            <input type="text" placeholder="Tên hiển thị (ví dụ: Video Tổng Quan)" value="${title}" class="media-block-title px-2 py-1 rounded-lg border border-brandBrown/15 text-xs font-bold focus:outline-none">
+          </div>
+          <button type="button" onclick="document.getElementById('${blockId}').remove()" class="text-xs text-red-500 font-bold hover:underline">Xóa</button>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center gap-2">
+            <input type="text" placeholder="${typePlaceholder}" value="${url}" class="media-block-url flex-grow px-3 py-1.5 rounded-xl border border-brandBrown/15 text-xs focus:outline-none focus:border-brandGreen">
+            ${type === "image" ? `
+              <label class="px-3 py-1.5 bg-brandOrange hover:bg-brandOrange/95 text-white font-bold text-[10px] rounded-xl cursor-pointer whitespace-nowrap">
+                Tải lên
+                <input type="file" accept="image/*" class="hidden" onchange="uploadFileToDriveForBlock('${blockId}')">
+              </label>
+            ` : ""}
+            <button type="button" onclick="normalizeAndPreviewBlock('${blockId}')" class="px-3 py-1.5 bg-brandGreen text-white font-bold text-[10px] rounded-xl whitespace-nowrap">
+              Kiểm tra
+            </button>
+          </div>
+
+          <!-- Preview box -->
+          <div class="media-block-preview hidden aspect-video max-w-sm bg-black rounded-xl overflow-hidden relative border border-brandBrown/5"></div>
+        </div>
+      `;
+
+      container.appendChild(block);
+      if (url) {
+        normalizeAndPreviewBlock(blockId);
+      }
+    }
+
+    // Normalize and preview media inside editor block
+    function normalizeAndPreviewBlock(blockId) {
+      const block = document.getElementById(blockId);
+      if (!block) return;
+
+      const type = block.dataset.type;
+      const urlInput = block.querySelector(".media-block-url");
+      const previewBox = block.querySelector(".media-block-preview");
+      
+      let rawVal = urlInput.value.trim();
+      if (!rawVal) return;
+
+      let normalized = rawVal;
+      let previewHtml = "";
+
+      if (type === "video") {
+        normalized = cleanBunnyUrlString(rawVal);
+        urlInput.value = normalized;
+        previewHtml = `<iframe src="${normalized}" class="w-full h-full border-0 absolute inset-0" allowfullscreen></iframe>`;
+      } else if (type === "youtube") {
+        normalized = cleanYouTubeUrlString(rawVal);
+        urlInput.value = normalized;
+        const ytId = extractYouTubeId(normalized);
+        if (ytId) {
+          previewHtml = `<iframe src="https://www.youtube.com/embed/${ytId}" class="w-full h-full border-0 absolute inset-0" allowfullscreen></iframe>`;
+        }
+      } else if (type === "image") {
+        normalized = rawVal;
+        let displayUrl = rawVal;
+        // If it's a Drive URL, convert to direct link for rendering
+        if (rawVal.includes("drive.google.com")) {
+          const match = rawVal.match(/d\/([^/]+)/) || rawVal.match(/[?&]id=([^&]+)/);
+          if (match && match[1]) {
+            displayUrl = `https://drive.google.com/uc?export=download&id=${match[1]}`;
+          }
+        }
+        previewHtml = `<img src="${displayUrl}" class="w-full h-full object-cover">`;
+      }
+
+      if (previewHtml) {
+        previewBox.innerHTML = previewHtml;
+        previewBox.classList.remove("hidden");
+      }
+    }
+
+    // Standalone Bunny Link Parser (Matching backend normalizer rules)
+    function cleanBunnyUrlString(input) {
+      let src = input.trim();
+      const match = src.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+      if (match) src = match[1];
+      src = src.replace(/&amp;/g, "&");
+
+      try {
+        const url = new URL(src);
+        const host = url.hostname.replace(/^www\./, "");
+        if (host === "player.mediadelivery.net" || host === "iframe.mediadelivery.net" || host === "video.bunnycdn.com") {
+          const parts = url.pathname.split("/").filter(Boolean);
+          const mode = parts[0];
+          const libId = parts[1];
+          const vidId = parts[2];
+          if ((mode === "embed" || mode === "play") && libId && vidId) {
+            return `https://iframe.mediadelivery.net/embed/${libId}/${vidId}`;
+          }
+        }
+      } catch(e){}
+
+      const regexMatch = src.match(/(?:player|iframe)\.mediadelivery\.net\/(?:embed|play)\/([^/]+)\/([^/?#]+)/);
+      if (regexMatch) {
+        return `https://iframe.mediadelivery.net/embed/${regexMatch[1]}/${regexMatch[2]}`;
+      }
+      return src;
+    }
+
+    // Standalone YouTube Parser (Matching backend normalizer rules)
+    function cleanYouTubeUrlString(input) {
+      let text = input.trim();
+      const match = text.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+      if (match) text = match[1];
+      text = text.replace(/&amp;/g, "&");
+
+      try {
+        const parsed = new URL(text);
+        const host = parsed.hostname.replace(/^www\./, "");
+        if (host === "youtu.be") {
+          const id = parsed.pathname.split("/").filter(Boolean)[0];
+          if (id) return `https://www.youtube.com/watch?v=${id}`;
+        }
+        if (host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com") {
+          if (parsed.searchParams.get("v")) {
+            return `https://www.youtube.com/watch?v=${parsed.searchParams.get("v")}`;
+          }
+          const parts = parsed.pathname.split("/").filter(Boolean);
+          if (parts[0] === "embed" || parts[0] === "shorts" || parts[0] === "live") {
+            const id = parts[1];
+            if (id) return `https://www.youtube.com/watch?v=${id}`;
+          }
+        }
+      } catch (err) {}
+
+      const regexMatch = text.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+      if (regexMatch) {
+        return `https://www.youtube.com/watch?v=${regexMatch[1]}`;
+      }
+      return text;
+    }
+
+    function extractYouTubeId(url) {
+      const match = url.match(/[?&]v=([^&]+)/);
+      if (match) return match[1];
+      // Check for /embed/ or /shorts/
+      const embedMatch = url.match(/(?:embed|shorts|live)\/([^/?#]+)/);
+      if (embedMatch) return embedMatch[1];
+      return "";
+    }
+
+    // File Uploader helper for image fields
+    async function uploadFileToDrive(inputEl, targetFieldId) {
+      const file = inputEl.files[0];
+      if (!file) return;
+
+      const course = document.getElementById("courseSelect").value;
+      const lesson = document.getElementById("lessonNo").value;
+      const title = document.getElementById("lessonTitle").value.trim() || file.name;
+
+      showLoader("Đang tải ảnh lên Drive...");
+
+      try {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+          const base64Data = reader.result;
+
+          try {
+            const res = await fetch("/api/admin-upload-image", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("admin_session_token")}`
+              },
+              body: JSON.stringify({
+                fileData: base64Data,
+                fileName: file.name,
+                mimeType: file.type,
+                course,
+                lesson,
+                title
+              })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+              document.getElementById(targetFieldId).value = data.directUrl;
+              showToast("Tải ảnh lên Google Drive thành công!");
+            } else {
+              showToast(data.error || "Tải ảnh thất bại", "error");
+            }
+          } catch (err) {
+            showToast("Lỗi kết nối API", "error");
+          } finally {
+            hideLoader();
+          }
+        };
+      } catch (err) {
+        showToast("Lỗi đọc file", "error");
+        hideLoader();
+      }
+    }
+
+    // File Uploader helper for media blocks
+    async function uploadFileToDriveForBlock(blockId) {
+      const block = document.getElementById(blockId);
+      const fileInput = block.querySelector("input[type='file']");
+      const urlInput = block.querySelector(".media-block-url");
+
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const course = document.getElementById("courseSelect").value;
+      const lesson = document.getElementById("lessonNo").value;
+      const title = block.querySelector(".media-block-title").value.trim() || file.name;
+
+      showLoader("Đang tải ảnh lên Drive...");
+
+      try {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+          const base64Data = reader.result;
+
+          try {
+            const res = await fetch("/api/admin-upload-image", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("admin_session_token")}`
+              },
+              body: JSON.stringify({
+                fileData: base64Data,
+                fileName: file.name,
+                mimeType: file.type,
+                course,
+                lesson,
+                title
+              })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+              urlInput.value = data.directUrl;
+              showToast("Tải ảnh thành phẩm thành công!");
+              normalizeAndPreviewBlock(blockId);
+            } else {
+              showToast(data.error || "Tải ảnh thất bại", "error");
+            }
+          } catch (err) {
+            showToast("Lỗi kết nối API", "error");
+          } finally {
+            hideLoader();
+          }
+        };
+      } catch (err) {
+        showToast("Lỗi đọc file", "error");
+        hideLoader();
+      }
+    }
+
+    // Clean primary video input
+    function testAndCleanVideoUrl() {
+      const el = document.getElementById("lessonVideoUrl");
+      const val = el.value.trim();
+      const statusEl = document.getElementById("videoUrlStatus");
+
+      if (!val) {
+        statusEl.innerText = "Vui lòng dán link video.";
+        statusEl.className = "text-xs font-semibold text-red-500 block";
+        return;
+      }
+
+      if (val.includes("mediadelivery.net") || val.includes("bunnycdn.com")) {
+        const cleaned = cleanBunnyUrlString(val);
+        el.value = cleaned;
+        statusEl.innerText = "✓ Đã nhận diện Bunny Video và chuẩn hóa thành công!";
+        statusEl.className = "text-xs font-semibold text-green-600 block";
+      } else if (val.includes("youtube.com") || val.includes("youtu.be")) {
+        const cleaned = cleanYouTubeUrlString(val);
+        el.value = cleaned;
+        statusEl.innerText = "✓ Đã nhận diện YouTube Video và chuẩn hóa thành công!";
+        statusEl.className = "text-xs font-semibold text-green-600 block";
+      } else {
+        statusEl.innerText = "Cảnh báo: Không thể nhận diện loại video này. Hãy kiểm tra lại.";
+        statusEl.className = "text-xs font-semibold text-amber-600 block";
+      }
+    }
+
+    // Recipe txt file upload parsing
+    let selectedRecipeBase64 = "";
+    let selectedRecipeFileName = "";
+    function handleRecipeFileSelected(inputEl) {
+      const file = inputEl.files[0];
+      if (!file) return;
+
+      selectedRecipeFileName = file.name;
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        selectedRecipeBase64 = reader.result.split(",")[1];
+      };
+    }
+
+    // Create Google Docs from recipe inputs
+    async function createGoogleDocFromRecipe() {
+      const course = document.getElementById("courseSelect").value;
+      const lesson = document.getElementById("lessonNo").value;
+      const title = document.getElementById("lessonTitle").value.trim();
+      const text = document.getElementById("recipeTextContent").value.trim();
+
+      if (!course || !lesson || !title) {
+        alert("Vui lòng điền đủ Tên khóa học, số bài và Tiêu đề bài học trước khi tạo công thức.");
+        return;
+      }
+
+      if (!text && !selectedRecipeBase64) {
+        alert("Vui lòng nhập văn bản công thức hoặc chọn file đính kèm trước.");
+        return;
+      }
+
+      showLoader("Đang tạo Google Docs trên Drive...");
+
+      try {
+        const body = {
+          course,
+          lesson,
+          title
+        };
+
+        if (selectedRecipeBase64) {
+          body.fileData = selectedRecipeBase64;
+          body.fileName = selectedRecipeFileName;
+        } else {
+          body.text = text;
+        }
+
+        const res = await fetch("/api/admin-upload-recipe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("admin_session_token")}`
+          },
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          document.getElementById("lessonRecipeUrl").value = data.recipeUrl;
+          
+          const link = document.getElementById("recipeUrlOpenLink");
+          link.href = data.recipeUrl;
+          link.classList.remove("hidden");
+
+          // Reset upload states
+          document.getElementById("recipeFileInput").value = "";
+          selectedRecipeBase64 = "";
+          selectedRecipeFileName = "";
+
+          showToast("Tạo Google Docs và chia sẻ thành công!");
+        } else {
+          showToast(data.error || "Tạo tài liệu thất bại", "error");
+        }
+      } catch (err) {
+        showToast("Lỗi kết nối API", "error");
+      } finally {
+        hideLoader();
+      }
+    }
+
+    // Compile media blocks into mediaUrls string
+    function compileMediaUrls() {
+      const blocks = document.querySelectorAll("#mediaBlocksContainer > div");
+      const lines = [];
+      blocks.forEach(b => {
+        const type = b.dataset.type;
+        const title = b.querySelector(".media-block-title").value.trim().replace(/[|\n]/g, "-");
+        const url = b.querySelector(".media-block-url").value.trim().replace(/[|\n]/g, "");
+
+        if (title && url) {
+          lines.push(`${type}|${title}|${url}`);
+        }
+      });
+      const val = lines.join("\n");
+      document.getElementById("lessonMediaUrls").value = val;
+      return val;
+    }
+
+    function previewMediaUrls() {
+      const compiled = compileMediaUrls();
+      if (!compiled) {
+        alert("Chưa có tài liệu media nào được thiết lập.");
+        return;
+      }
+      alert("Nội dung mediaUrls sẽ lưu vào sheet:\n\n" + compiled);
+    }
+
+    // Handle saving lesson (both creation and edit)
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+
+      const course = document.getElementById("lessonCourseSlug").value;
+      const lesson = document.getElementById("lessonNo").value.trim();
+      const title = document.getElementById("lessonTitle").value.trim();
+      const description = document.getElementById("lessonDescription").value.trim();
+      const duration = document.getElementById("lessonDuration").value.trim();
+      const level = document.getElementById("lessonLevel").value;
+      const thumbnailUrl = document.getElementById("lessonThumbnailUrl").value.trim();
+      const videoUrl = document.getElementById("lessonVideoUrl").value.trim();
+      const recipeUrl = document.getElementById("lessonRecipeUrl").value.trim();
+      
+      const mediaUrls = compileMediaUrls();
+
+      if (!course || !lesson || !title) {
+        showToast("Vui lòng điền đầy đủ khóa học, số bài và tiêu đề.", "error");
+        return;
+      }
+
+      showLoader("Đang lưu dữ liệu bài học vào Google Sheets...");
+
+      const payload = {
+        action: isEditMode ? "update" : "create",
+        course,
+        lesson,
+        lessonData: {
+          course,
+          lesson,
+          title,
+          description,
+          duration,
+          level,
+          thumbnailUrl,
+          videoUrl,
+          mediaUrls,
+          recipeUrl,
+          status: "active"
+        }
+      };
+
+      if (isEditMode) {
+        payload.originalCourse = originalCourse;
+        payload.originalLesson = originalLesson;
+      }
+
+      try {
+        const res = await fetch("/api/admin-lessons", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("admin_session_token")}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(isEditMode ? "Cập nhật bài học thành công!" : "Tạo bài học mới thành công!");
+          
+          // Reload lists
+          await loadLessonsList(course);
+          
+          // Clear and reset form back to new state
+          initNewLessonForm();
+        } else {
+          showToast(data.error || "Ghi Sheet thất bại", "error");
+        }
+      } catch (err) {
+        showToast("Lỗi kết nối ghi dữ liệu", "error");
+      } finally {
+        hideLoader();
+      }
+    }
+
+    // Handle delete/hide actions
+    async function deleteLesson(courseSlug, lessonNo) {
+      const promptText = `Bạn có chắc chắn muốn XÓA bài học ${lessonNo} thuộc khóa học ${courseSlug}?\n\nNếu Sheet có cột status, bài học sẽ bị ẩn. Nếu không, bài học sẽ bị xóa hoàn toàn khỏi Sheet.`;
+      if (!confirm(promptText)) return;
+
+      showLoader("Đang xóa bài học khỏi Sheet...");
+
+      try {
+        const res = await fetch("/api/admin-lessons", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("admin_session_token")}`
+          },
+          body: JSON.stringify({
+            action: "delete",
+            course: courseSlug,
+            lesson: lessonNo
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(data.message || "Xóa bài học thành công!");
+          
+          // Reload list
+          await loadLessonsList(courseSlug);
+          
+          // Reset form if we deleted the lesson being edited
+          if (isEditMode && originalCourse === courseSlug && String(originalLesson) === String(lessonNo)) {
+            initNewLessonForm();
+          }
+        } else {
+          showToast(data.error || "Xóa bài học thất bại", "error");
+        }
+      } catch (err) {
+        showToast("Lỗi kết nối", "error");
+      } finally {
+        hideLoader();
+      }
+    }
+
+    // On Load
+    window.onload = () => {
+      initGoogleSignIn();
+    };
+  </script>
+</body>
+</html>
