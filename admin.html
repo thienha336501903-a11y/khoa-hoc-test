@@ -75,6 +75,21 @@
   <!-- TOAST NOTIFICATIONS -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-[100] max-w-sm w-full space-y-3 pointer-events-none"></div>
 
+  <!-- DETAILED ERROR MODAL -->
+  <div id="errorModal" class="fixed inset-0 z-[120] bg-brandBrown/70 backdrop-blur-sm hidden items-center justify-center px-4 py-6">
+    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-brandBrown/10 overflow-hidden">
+      <div class="px-5 py-4 border-b border-brandBrown/10 flex items-center justify-between gap-3">
+        <h3 id="errorModalTitle" class="font-black text-brandGreen text-base">Chi tiết lỗi</h3>
+        <button type="button" onclick="closeErrorModal()" class="w-9 h-9 rounded-xl bg-brandGray hover:bg-brandBrown/10 font-black text-brandBrown">×</button>
+      </div>
+      <pre id="errorModalMessage" class="p-5 max-h-[65vh] overflow-auto whitespace-pre-wrap break-words text-xs sm:text-sm leading-relaxed text-brandBrown bg-brandCream"></pre>
+      <div class="px-5 py-4 border-t border-brandBrown/10 flex justify-end gap-3">
+        <button type="button" onclick="copyErrorModalMessage()" class="px-4 py-2 rounded-xl bg-brandGreen hover:bg-brandGreenLight text-white font-bold text-xs">Copy lỗi</button>
+        <button type="button" onclick="closeErrorModal()" class="px-4 py-2 rounded-xl bg-brandGray hover:bg-brandBrown/10 text-brandBrown font-bold text-xs">Đóng</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MAIN CONTAINER -->
   <div id="appContainer" class="flex-grow flex flex-col">
 
@@ -400,6 +415,77 @@
       }, 4000);
     }
 
+    function getDetailedErrorMessage(data, fallback = "Có lỗi xảy ra") {
+      if (!data) return fallback;
+
+      const parts = [];
+
+      if (data.error) parts.push(`Lỗi: ${data.error}`);
+      if (data.message) parts.push(`Chi tiết: ${data.message}`);
+      if (data.code) parts.push(`Mã lỗi: ${data.code}`);
+      if (data.reason) parts.push(`Nguyên nhân: ${data.reason}`);
+      if (data.hint) parts.push(`Gợi ý xử lý: ${data.hint}`);
+      if (data.detail) parts.push(`Chi tiết cũ: ${data.detail}`);
+
+      if (data.extra) {
+        parts.push(`Thông tin thêm:\n${JSON.stringify(data.extra, null, 2)}`);
+      }
+
+      if (data.googleErrors) {
+        parts.push(`Google Error:\n${JSON.stringify(data.googleErrors, null, 2)}`);
+      }
+
+      return parts.join("\n\n") || fallback;
+    }
+
+    async function parseApiResponse(response) {
+      let data = null;
+      const text = await response.text();
+
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (err) {
+        data = { message: text || response.statusText };
+      }
+
+      if (!response.ok) {
+        const detailedMessage = getDetailedErrorMessage(data, `HTTP ${response.status}`);
+        throw new Error(detailedMessage);
+      }
+
+      return data;
+    }
+
+    function showErrorModal(title, message) {
+      document.getElementById("errorModalTitle").innerText = title || "Chi tiết lỗi";
+      document.getElementById("errorModalMessage").innerText = message || "Có lỗi xảy ra";
+      const modal = document.getElementById("errorModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeErrorModal() {
+      const modal = document.getElementById("errorModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    async function copyErrorModalMessage() {
+      const message = document.getElementById("errorModalMessage").innerText;
+      try {
+        await navigator.clipboard.writeText(message);
+        showToast("Đã copy lỗi");
+      } catch (err) {
+        showToast("Không thể copy lỗi", "error");
+      }
+    }
+
+    function showApiError(title, err, toastMessage = "Có lỗi xảy ra") {
+      const detail = err?.message || String(err || toastMessage);
+      showToast(toastMessage, "error");
+      showErrorModal(title, detail);
+    }
+
     function showLoader(message = "Đang xử lý...") {
       document.getElementById("globalLoaderMessage").innerText = message;
       document.getElementById("globalLoader").classList.remove("hidden");
@@ -413,7 +499,7 @@
     async function initGoogleSignIn() {
       try {
         const res = await fetch("/api/public-config");
-        const config = await res.json();
+        const config = await parseApiResponse(res);
         googleClientId = config.googleClientId;
 
         if (!googleClientId) {
@@ -454,7 +540,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ credential: response.credential })
         });
-        const data = await res.json();
+        const data = await parseApiResponse(res);
 
         if (res.ok && data.allowed) {
           localStorage.setItem("admin_session_token", data.sessionToken);
@@ -465,7 +551,7 @@
           showToast(data.error || "Tài khoản không có quyền quản trị.", "error");
         }
       } catch (err) {
-        showToast("Đăng nhập thất bại. Vui lòng thử lại.", "error");
+        showApiError("Đăng nhập admin thất bại", err, "Đăng nhập thất bại");
       } finally {
         hideLoader();
       }
@@ -478,7 +564,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionToken: token })
         });
-        const data = await res.json();
+        const data = await parseApiResponse(res);
 
         if (res.ok && data.allowed) {
           enterAdminWorkspace(data.email);
@@ -524,16 +610,12 @@
             "Authorization": `Bearer ${localStorage.getItem("admin_session_token")}`
           }
         });
-        const data = await res.json();
-        if (res.ok) {
-          populateCoursesSelect(data.courses);
-          window.globalConfig = data.config || {};
-          onCourseChanged(); // Trigger lessons load
-        } else {
-          showToast(data.error || "Không thể tải cấu hình khóa học", "error");
-        }
+        const data = await parseApiResponse(res);
+        populateCoursesSelect(data.courses);
+        window.globalConfig = data.config || {};
+        onCourseChanged(); // Trigger lessons load
       } catch (err) {
-        showToast("Lỗi tải thông tin khóa học", "error");
+        showApiError("Lỗi tải thông tin khóa học", err, "Lỗi tải thông tin khóa học");
       } finally {
         hideLoader();
       }
@@ -621,18 +703,14 @@
           })
         });
 
-        if (res.ok) {
-          showToast("Cập nhật cấu hình khóa học thành công!");
-          // Update local copy
-          window.globalConfig[`${course}_title`] = title;
-          window.globalConfig[`${course}_subtitle`] = subtitle;
-          window.globalConfig[`${course}_heroImage`] = heroImage;
-        } else {
-          const errData = await res.json();
-          showToast(errData.error || "Không thể cập nhật cấu hình", "error");
-        }
+        await parseApiResponse(res);
+        showToast("Cập nhật cấu hình khóa học thành công!");
+        // Update local copy
+        window.globalConfig[`${course}_title`] = title;
+        window.globalConfig[`${course}_subtitle`] = subtitle;
+        window.globalConfig[`${course}_heroImage`] = heroImage;
       } catch (err) {
-        showToast("Lỗi lưu cấu hình", "error");
+        showApiError("Lỗi lưu cấu hình khóa học", err, "Lỗi lưu cấu hình");
       } finally {
         hideLoader();
       }
@@ -644,16 +722,12 @@
 
       try {
         const res = await fetch(`/api/admin-lessons?course=${encodeURIComponent(course)}`);
-        const data = await res.json();
-
-        if (res.ok) {
-          currentLessonsList = data.lessons || [];
-          renderLessonsList(currentLessonsList);
-        } else {
-          container.innerHTML = `<p class="text-xs text-red-500 font-bold py-4 text-center">Lỗi tải danh sách.</p>`;
-        }
+        const data = await parseApiResponse(res);
+        currentLessonsList = data.lessons || [];
+        renderLessonsList(currentLessonsList);
       } catch (e) {
-        container.innerHTML = `<p class="text-xs text-red-500 font-bold py-4 text-center">Lỗi kết nối.</p>`;
+        container.innerHTML = `<p class="text-xs text-red-500 font-bold py-4 text-center">Lỗi tải danh sách.</p>`;
+        showApiError("Lỗi tải danh sách bài học", e, "Lỗi tải danh sách bài học");
       }
     }
 
@@ -972,15 +1046,15 @@
               })
             });
 
-            const data = await res.json();
-            if (res.ok && data.success) {
+            const data = await parseApiResponse(res);
+            if (data.success) {
               document.getElementById(targetFieldId).value = data.directUrl;
               showToast("Tải ảnh lên Google Drive thành công!");
             } else {
               showToast(data.error || "Tải ảnh thất bại", "error");
             }
           } catch (err) {
-            showToast("Lỗi kết nối API", "error");
+            showApiError("Upload ảnh lên Google Drive thất bại", err, "Tải ảnh thất bại");
           } finally {
             hideLoader();
           }
@@ -1029,8 +1103,8 @@
               })
             });
 
-            const data = await res.json();
-            if (res.ok && data.success) {
+            const data = await parseApiResponse(res);
+            if (data.success) {
               urlInput.value = data.directUrl;
               showToast("Tải ảnh thành phẩm thành công!");
               normalizeAndPreviewBlock(blockId);
@@ -1038,7 +1112,7 @@
               showToast(data.error || "Tải ảnh thất bại", "error");
             }
           } catch (err) {
-            showToast("Lỗi kết nối API", "error");
+            showApiError("Upload ảnh lên Google Drive thất bại", err, "Tải ảnh thất bại");
           } finally {
             hideLoader();
           }
@@ -1134,8 +1208,8 @@
           body: JSON.stringify(body)
         });
 
-        const data = await res.json();
-        if (res.ok && data.success) {
+        const data = await parseApiResponse(res);
+        if (data.success) {
           document.getElementById("lessonRecipeUrl").value = data.recipeUrl;
           
           const link = document.getElementById("recipeUrlOpenLink");
@@ -1152,7 +1226,7 @@
           showToast(data.error || "Tạo tài liệu thất bại", "error");
         }
       } catch (err) {
-        showToast("Lỗi kết nối API", "error");
+        showApiError("Tạo Google Docs công thức thất bại", err, "Tạo tài liệu thất bại");
       } finally {
         hideLoader();
       }
@@ -1242,8 +1316,8 @@
           body: JSON.stringify(payload)
         });
 
-        const data = await res.json();
-        if (res.ok && data.success) {
+        const data = await parseApiResponse(res);
+        if (data.success) {
           showToast(isEditMode ? "Cập nhật bài học thành công!" : "Tạo bài học mới thành công!");
           
           // Reload lists
@@ -1255,7 +1329,7 @@
           showToast(data.error || "Ghi Sheet thất bại", "error");
         }
       } catch (err) {
-        showToast("Lỗi kết nối ghi dữ liệu", "error");
+        showApiError("Lỗi lưu bài học", err, "Lỗi lưu bài học");
       } finally {
         hideLoader();
       }
@@ -1282,8 +1356,8 @@
           })
         });
 
-        const data = await res.json();
-        if (res.ok && data.success) {
+        const data = await parseApiResponse(res);
+        if (data.success) {
           showToast(data.message || "Xóa bài học thành công!");
           
           // Reload list
@@ -1297,7 +1371,7 @@
           showToast(data.error || "Xóa bài học thất bại", "error");
         }
       } catch (err) {
-        showToast("Lỗi kết nối", "error");
+        showApiError("Lỗi xóa hoặc ẩn bài học", err, "Xóa bài học thất bại");
       } finally {
         hideLoader();
       }
