@@ -522,8 +522,8 @@
             return;
           }
 
-          adminDriveAccessToken = response.access_token;
-          resolve(response.access_token);
+          adminDriveAccessToken = String(response.access_token || "").trim();
+          resolve(adminDriveAccessToken);
         };
 
         adminDriveTokenClient.requestAccessToken({ prompt });
@@ -531,7 +531,8 @@
     }
 
     async function ensureAdminDriveAccess() {
-      const accessToken = adminDriveAccessToken || await requestGoogleDriveAccessToken("consent");
+      let accessToken = adminDriveAccessToken || await requestGoogleDriveAccessToken("consent");
+      accessToken = String(accessToken || "").trim();
 
       if (!accessToken) {
         adminDriveAccessToken = "";
