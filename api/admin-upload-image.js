@@ -1,11 +1,20 @@
 import { Readable } from "stream";
-import { getDriveClient, getAdminEmailFromRequest } from "./admin-utils.js";
+import { getDriveClient, getAdminEmailFromRequest, adminError } from "./admin-utils.js";
+
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+function isValidBase64(input) {
+  const text = String(input || "").trim();
+  return Boolean(text) && /^[A-Za-z0-9+/]+={0,2}$/.test(text) && text.length % 4 === 0;
+}
 
 export default async function handler(req, res) {
   try {
     const adminEmail = await getAdminEmailFromRequest(req);
     if (!adminEmail) {
-      return res.status(401).json({ error: "Unauthorized: Admin access required" });
+      return adminError(res, 401, "Unauthorized: Admin access required", new Error("Unauthorized"), {
+        api: "admin-upload-image"
+      });
     }
 
     if (req.method !== "POST") {
@@ -13,6 +22,8 @@ export default async function handler(req, res) {
     }
 
     const { fileData, fileName, mimeType, course, lesson, title } = req.body || {};
+    const folderId = process.env.GOOGLE_DRIVE_IMAGE_FOLDER_ID || "";
+    const serviceEmail = process.env.GOOGLE_CLIENT_EMAIL || "";
 
     if (!fileData) {
       return res.status(400).json({ error: "Missing fileData parameter" });
@@ -30,6 +41,26 @@ export default async function handler(req, res) {
       cleanData = parts[1];
     }
 
+    cleanData = String(cleanData || "").trim();
+
+    if (!cleanMimeType.startsWith("image/")) {
+      return adminError(res, 400, "File tải lên không phải ảnh", new Error("Invalid image mimeType"), {
+        api: "admin-upload-image",
+        mimeType: cleanMimeType,
+        folderId,
+        serviceEmail
+      });
+    }
+
+    if (!isValidBase64(cleanData)) {
+      return adminError(res, 400, "fileData không phải base64 hợp lệ", new Error("Invalid base64 fileData"), {
+        api: "admin-upload-image",
+        mimeType: cleanMimeType,
+        folderId,
+        serviceEmail
+      });
+    }
+
     // Determine target file name
     let finalFileName = fileName || `image_${Date.now()}.jpg`;
     if (course && lesson && title) {
@@ -38,10 +69,21 @@ export default async function handler(req, res) {
     }
 
     const drive = await getDriveClient();
-    const folderId = process.env.GOOGLE_DRIVE_IMAGE_FOLDER_ID;
 
     // Convert base64 data to stream
     const buffer = Buffer.from(cleanData, "base64");
+    if (buffer.length > MAX_IMAGE_BYTES) {
+      return adminError(res, 413, "File ảnh tải lên quá lớn", new Error("request entity too large"), {
+        api: "admin-upload-image",
+        fileName: finalFileName,
+        mimeType: cleanMimeType,
+        sizeBytes: buffer.length,
+        maxBytes: MAX_IMAGE_BYTES,
+        folderId,
+        serviceEmail
+      });
+    }
+
     const media = {
       mimeType: cleanMimeType,
       body: Readable.from(buffer)
@@ -59,7 +101,8 @@ export default async function handler(req, res) {
     const driveFileResult = await drive.files.create({
       requestBody: fileMetadata,
       media,
-      fields: "id, webViewLink, webContentLink"
+      fields: "id, webViewLink, webContentLink",
+      supportsAllDrives: true
     });
 
     const fileId = driveFileResult.data.id;
@@ -73,7 +116,8 @@ export default async function handler(req, res) {
       requestBody: {
         role: "reader",
         type: "anyone"
-      }
+      },
+      supportsAllDrives: true
     });
 
     // 3. Return view and direct download link
@@ -88,8 +132,14 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("Admin Upload Image Error:", err);
-    return res.status(500).json({ error: "Server error", detail: err.message });
+    return adminError(res, 500, "Upload ảnh lên Google Drive thất bại", err, {
+      api: "admin-upload-image",
+      course: req.body?.course || "",
+      lesson: req.body?.lesson || "",
+      title: req.body?.title || "",
+      folderId: process.env.GOOGLE_DRIVE_IMAGE_FOLDER_ID || "",
+      serviceEmail: process.env.GOOGLE_CLIENT_EMAIL || ""
+    });
   }
 }
 
@@ -100,4 +150,3 @@ export const config = {
     }
   }
 };
-
