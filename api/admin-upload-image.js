@@ -1,5 +1,5 @@
 import { Readable } from "stream";
-import { getDriveClient, getAdminEmailFromRequest, adminError } from "./admin-utils.js";
+import { getAdminOAuthClients, getAdminEmailFromRequest, adminError } from "./admin-utils.js";
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
@@ -21,9 +21,8 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const { fileData, fileName, mimeType, course, lesson, title } = req.body || {};
+    const { fileData, fileName, mimeType, course, lesson, title, accessToken } = req.body || {};
     const folderId = process.env.GOOGLE_DRIVE_IMAGE_FOLDER_ID || "";
-    const serviceEmail = process.env.GOOGLE_CLIENT_EMAIL || "";
 
     if (!fileData) {
       return res.status(400).json({ error: "Missing fileData parameter" });
@@ -32,8 +31,8 @@ export default async function handler(req, res) {
     let cleanData = fileData;
     let cleanMimeType = mimeType || "image/jpeg";
 
-    if (fileData.includes(";base64,")) {
-      const parts = fileData.split(";base64,");
+    if (String(fileData).includes(";base64,")) {
+      const parts = String(fileData).split(";base64,");
       const mimeMatch = parts[0].match(/data:(.*)/);
       if (mimeMatch) {
         cleanMimeType = mimeMatch[1];
@@ -47,8 +46,7 @@ export default async function handler(req, res) {
       return adminError(res, 400, "File tải lên không phải ảnh", new Error("Invalid image mimeType"), {
         api: "admin-upload-image",
         mimeType: cleanMimeType,
-        folderId,
-        serviceEmail
+        folderId
       });
     }
 
@@ -56,21 +54,16 @@ export default async function handler(req, res) {
       return adminError(res, 400, "fileData không phải base64 hợp lệ", new Error("Invalid base64 fileData"), {
         api: "admin-upload-image",
         mimeType: cleanMimeType,
-        folderId,
-        serviceEmail
+        folderId
       });
     }
 
-    // Determine target file name
     let finalFileName = fileName || `image_${Date.now()}.jpg`;
     if (course && lesson && title) {
       const extension = cleanMimeType.split("/")[1] || "jpg";
       finalFileName = `${course} - ${lesson} - ${title}.${extension}`.replace(/[/\\?%*:|"<>]/g, "-");
     }
 
-    const drive = await getDriveClient();
-
-    // Convert base64 data to stream
     const buffer = Buffer.from(cleanData, "base64");
     if (buffer.length > MAX_IMAGE_BYTES) {
       return adminError(res, 413, "File ảnh tải lên quá lớn", new Error("request entity too large"), {
@@ -79,15 +72,12 @@ export default async function handler(req, res) {
         mimeType: cleanMimeType,
         sizeBytes: buffer.length,
         maxBytes: MAX_IMAGE_BYTES,
-        folderId,
-        serviceEmail
+        folderId
       });
     }
 
-    const media = {
-      mimeType: cleanMimeType,
-      body: Readable.from(buffer)
-    };
+    const { drive, tokenInfo } = await getAdminOAuthClients(accessToken, adminEmail);
+    const ownerEmail = tokenInfo.email || adminEmail;
 
     const fileMetadata = {
       name: finalFileName
@@ -97,11 +87,13 @@ export default async function handler(req, res) {
       fileMetadata.parents = [folderId.trim()];
     }
 
-    // 1. Create file on Drive
     const driveFileResult = await drive.files.create({
       requestBody: fileMetadata,
-      media,
-      fields: "id, webViewLink, webContentLink",
+      media: {
+        mimeType: cleanMimeType,
+        body: Readable.from(buffer)
+      },
+      fields: "id, webViewLink, webContentLink, owners(emailAddress)",
       supportsAllDrives: true
     });
 
@@ -110,7 +102,6 @@ export default async function handler(req, res) {
       throw new Error("Failed to upload file to Google Drive");
     }
 
-    // 2. Share permissions to anyone as reader
     await drive.permissions.create({
       fileId,
       requestBody: {
@@ -120,7 +111,6 @@ export default async function handler(req, res) {
       supportsAllDrives: true
     });
 
-    // 3. Return view and direct download link
     const imageUrl = `https://drive.google.com/file/d/${fileId}/view`;
     const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
 
@@ -128,17 +118,18 @@ export default async function handler(req, res) {
       success: true,
       fileId,
       imageUrl,
-      directUrl
+      directUrl,
+      ownerEmail,
+      authMode: "admin_oauth"
     });
-
   } catch (err) {
-    return adminError(res, 500, "Upload ảnh lên Google Drive thất bại", err, {
+    return adminError(res, err.status || 500, "Upload ảnh lên Google Drive thất bại", err, {
       api: "admin-upload-image",
       course: req.body?.course || "",
       lesson: req.body?.lesson || "",
       title: req.body?.title || "",
       folderId: process.env.GOOGLE_DRIVE_IMAGE_FOLDER_ID || "",
-      serviceEmail: process.env.GOOGLE_CLIENT_EMAIL || ""
+      usesAdminOAuth: true
     });
   }
 }
