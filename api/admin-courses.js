@@ -1,15 +1,19 @@
-import { getSheetsClient, getAdminEmailFromRequest } from "./admin-utils.js";
+import { getSheetsClient, getAdminEmailFromRequest, adminError } from "./admin-utils.js";
 
 export default async function handler(req, res) {
   try {
     const adminEmail = await getAdminEmailFromRequest(req);
     if (!adminEmail) {
-      return res.status(401).json({ error: "Unauthorized: Admin access required" });
+      return adminError(res, 401, "Unauthorized: Admin access required", new Error("Unauthorized"), {
+        api: "admin-courses"
+      });
     }
 
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
     if (!spreadsheetId) {
-      return res.status(500).json({ error: "Missing GOOGLE_SHEET_ID in environment" });
+      return adminError(res, 500, "Missing GOOGLE_SHEET_ID in environment", new Error("Missing GOOGLE_SHEET_ID"), {
+        api: "admin-courses"
+      });
     }
 
     const sheets = await getSheetsClient();
@@ -170,7 +174,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
 
   } catch (err) {
-    console.error("Admin Courses API Error:", err);
-    return res.status(500).json({ error: "Server error", detail: err.message });
+    return adminError(res, 500, "Admin courses API thất bại", err, {
+      api: "admin-courses",
+      method: req.method,
+      action: req.body?.action || ""
+    });
   }
 }
