@@ -1,14 +1,17 @@
 import {
   getDriveClient,
   getDocsClient,
-  getAdminEmailFromRequest
+  getAdminEmailFromRequest,
+  adminError
 } from "./admin-utils.js";
 
 export default async function handler(req, res) {
   try {
     const adminEmail = await getAdminEmailFromRequest(req);
     if (!adminEmail) {
-      return res.status(401).json({ error: "Unauthorized: Admin access required" });
+      return adminError(res, 401, "Unauthorized: Admin access required", new Error("Unauthorized"), {
+        api: "admin-upload-recipe"
+      });
     }
 
     if (req.method !== "POST") {
@@ -16,6 +19,23 @@ export default async function handler(req, res) {
     }
 
     const { course, lesson, title, text, fileData, fileName } = req.body || {};
+    const folderId = process.env.GOOGLE_DRIVE_RECIPE_FOLDER_ID || "";
+    const serviceEmail = process.env.GOOGLE_CLIENT_EMAIL || "";
+
+    if (!serviceEmail) {
+      return adminError(res, 500, "Thiếu GOOGLE_CLIENT_EMAIL khi tạo Google Docs", new Error("Missing GOOGLE_CLIENT_EMAIL"), {
+        api: "admin-upload-recipe",
+        folderId
+      });
+    }
+
+    if (!process.env.GOOGLE_PRIVATE_KEY) {
+      return adminError(res, 500, "Thiếu GOOGLE_PRIVATE_KEY khi tạo Google Docs", new Error("Missing GOOGLE_PRIVATE_KEY"), {
+        api: "admin-upload-recipe",
+        folderId,
+        serviceEmail
+      });
+    }
 
     if (!course || !lesson || !title) {
       return res.status(400).json({ error: "Missing course, lesson, or title parameters" });
@@ -39,7 +59,6 @@ export default async function handler(req, res) {
     const drive = await getDriveClient();
     const docs = await getDocsClient();
 
-    const folderId = process.env.GOOGLE_DRIVE_RECIPE_FOLDER_ID;
     const docName = `${course} - ${lesson} - ${title}`;
 
     // 1. Create a Google Doc file inside the folder (if specified)
@@ -54,7 +73,8 @@ export default async function handler(req, res) {
 
     const docFile = await drive.files.create({
       requestBody: fileMetadata,
-      fields: "id"
+      fields: "id",
+      supportsAllDrives: true
     });
 
     const documentId = docFile.data.id;
@@ -83,7 +103,8 @@ export default async function handler(req, res) {
       requestBody: {
         role: "reader",
         type: "anyone"
-      }
+      },
+      supportsAllDrives: true
     });
 
     const recipeUrl = `https://docs.google.com/document/d/${documentId}/edit`;
@@ -95,8 +116,14 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("Admin Upload Recipe Error:", err);
-    return res.status(500).json({ error: "Server error", detail: err.message });
+    return adminError(res, 500, "Tạo Google Docs công thức thất bại", err, {
+      api: "admin-upload-recipe",
+      course: req.body?.course || "",
+      lesson: req.body?.lesson || "",
+      title: req.body?.title || "",
+      folderId: process.env.GOOGLE_DRIVE_RECIPE_FOLDER_ID || "",
+      serviceEmail: process.env.GOOGLE_CLIENT_EMAIL || ""
+    });
   }
 }
 
@@ -107,4 +134,3 @@ export const config = {
     }
   }
 };
-
