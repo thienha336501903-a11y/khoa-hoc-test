@@ -27,9 +27,15 @@ export default async function handler(req, res) {
     const cleanAccessToken = String(accessToken || "").trim();
 
     if (!cleanAccessToken) {
-      return adminError(res, 401, "Chưa có Google Drive OAuth access token", new Error("Missing Google OAuth access token"), {
-        api: "admin-drive-auth",
-        instruction: "Bấm Kết nối Google Drive hoặc thao tác lại Tạo Docs/Upload ảnh và chọn Cho phép."
+      return res.status(200).json({
+        success: false,
+        needsOAuth: true,
+        error: "Chưa có Google Drive OAuth access token",
+        message: "Bạn chưa cấp quyền Google Drive cho Admin CMS. Vui lòng bấm lại và chọn Cho phép.",
+        hint: "Admin chưa cấp quyền Google Drive OAuth. Hãy bấm Kết nối Google Drive hoặc thao tác lại Tạo Docs/Upload ảnh và chọn Cho phép.",
+        extra: {
+          api: "admin-drive-auth"
+        }
       });
     }
 
