@@ -228,6 +228,10 @@ export async function getAdminOAuthClients(accessToken, expectedEmail = "") {
 export function buildAdminErrorHint(context, message, code, reason) {
   const haystack = `${context || ""} ${message || ""} ${code || ""} ${reason || ""}`.toLowerCase();
 
+  if (haystack.includes("missing google oauth access token")) {
+    return "Admin chưa cấp quyền Google Drive OAuth. Hãy bấm Kết nối Google Drive hoặc thao tác lại Tạo Docs/Upload ảnh và chọn Cho phép.";
+  }
+
   if (haystack.includes("phiên google drive đã hết hạn") || haystack.includes("invalid_token") || haystack.includes("invalid token")) {
     return "Phiên Google Drive đã hết hạn. Vui lòng đăng nhập lại.";
   }
