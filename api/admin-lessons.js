@@ -2,7 +2,8 @@ import {
   getSheetsClient,
   getAdminEmailFromRequest,
   normalizeBunnyUrl,
-  normalizeYouTubeUrl
+  normalizeYouTubeUrl,
+  adminError
 } from "./admin-utils.js";
 
 // Check if a URL is a YouTube link
@@ -61,12 +62,16 @@ export default async function handler(req, res) {
   try {
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
     if (!spreadsheetId) {
-      return res.status(500).json({ error: "Missing GOOGLE_SHEET_ID in environment" });
+      return adminError(res, 500, "Missing GOOGLE_SHEET_ID in environment", new Error("Missing GOOGLE_SHEET_ID"), {
+        api: "admin-lessons"
+      });
     }
 
     const adminEmail = await getAdminEmailFromRequest(req);
     if (!adminEmail) {
-      return res.status(401).json({ error: "Unauthorized: Admin access required" });
+      return adminError(res, 401, "Unauthorized: Admin access required", new Error("Unauthorized"), {
+        api: "admin-lessons"
+      });
     }
 
     const sheets = await getSheetsClient();
@@ -116,8 +121,9 @@ export default async function handler(req, res) {
       const lessonRows = lessonRowsResult.data.values || [];
 
       if (lessonRows.length < 1) {
-        return res.status(500).json({
-          error: "Sheet Lessons trống hoặc không có dòng tiêu đề. Vui lòng tạo dòng tiêu đề trước."
+        return adminError(res, 500, "Sheet Lessons trống hoặc không có dòng tiêu đề", new Error("Sheet Lessons missing header row"), {
+          api: "admin-lessons",
+          sheet: "Lessons"
         });
       }
 
@@ -125,8 +131,12 @@ export default async function handler(req, res) {
       
       // CRITICAL REQUIREMENT: Check if mediaUrls column exists
       if (!headers.includes("mediaUrls")) {
-        return res.status(400).json({
-          error: "Sheet thiếu cột mediaUrls, vui lòng thêm cột này vào tab Lessons."
+        return adminError(res, 400, "Sheet thiếu cột mediaUrls", new Error("Missing mediaUrls column"), {
+          api: "admin-lessons",
+          sheet: "Lessons",
+          headers,
+          requiredColumn: "mediaUrls",
+          instruction: "Vào tab Lessons thêm cột mediaUrls."
         });
       }
 
@@ -196,7 +206,13 @@ export default async function handler(req, res) {
         }
 
         if (foundRowIndex === -1) {
-          return res.status(404).json({ error: "Không tìm thấy bài học để cập nhật" });
+          return adminError(res, 404, "Không tìm thấy bài học cần sửa", new Error("Lesson row not found for update"), {
+            api: "admin-lessons",
+            action: "update",
+            course: originalCourse,
+            lesson: originalLesson,
+            instruction: "Kiểm tra course và lesson."
+          });
         }
 
         // Keep all existing column data to avoid breaking custom fields, and update the edited ones
@@ -257,7 +273,13 @@ export default async function handler(req, res) {
         }
 
         if (foundRowIndex === -1) {
-          return res.status(404).json({ error: "Không tìm thấy bài học để xóa" });
+          return adminError(res, 404, "Không tìm thấy bài học cần xóa", new Error("Lesson row not found for delete"), {
+            api: "admin-lessons",
+            action: "delete",
+            course: targetCourse,
+            lesson: targetLesson,
+            instruction: "Kiểm tra course và lesson."
+          });
         }
 
         const statusColIdx = headers.indexOf("status");
@@ -282,7 +304,10 @@ export default async function handler(req, res) {
           const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
           const sheet = spreadsheet.data.sheets.find(s => s.properties.title === "Lessons");
           if (!sheet) {
-            return res.status(500).json({ error: "Không tìm thấy tab Lessons trong spreadsheet" });
+            return adminError(res, 500, "Không tìm thấy tab Lessons trong spreadsheet", new Error("Missing Lessons sheet"), {
+              api: "admin-lessons",
+              sheet: "Lessons"
+            });
           }
           const sheetId = sheet.properties.sheetId;
 
@@ -314,7 +339,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
 
   } catch (err) {
-    console.error("Admin Lessons API Error:", err);
-    return res.status(500).json({ error: "Server error", detail: err.message });
+    return adminError(res, 500, "Admin lessons API thất bại", err, {
+      api: "admin-lessons",
+      method: req.method,
+      action: req.body?.action || "",
+      course: req.body?.course || req.query?.course || "",
+      lesson: req.body?.lesson || ""
+    });
   }
 }
