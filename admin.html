@@ -125,7 +125,11 @@
             <div class="text-right hidden sm:block">
               <span class="text-[10px] font-bold text-brandGreen block">QUẢN TRỊ VIÊN</span>
               <span id="adminEmailBadge" class="text-xs text-brandBrown/60 font-semibold block">admin@gmail.com</span>
+              <span id="adminDriveStatus" class="text-[10px] text-brandBrown/45 font-semibold block">Google Drive chưa kết nối</span>
             </div>
+            <button onclick="connectGoogleDrive()" class="px-3.5 py-2 bg-brandGreen hover:bg-brandGreenLight text-white font-bold text-xs rounded-xl transition duration-150">
+              Kết nối Google Drive
+            </button>
             <button onclick="logoutAdmin()" class="px-3.5 py-2 bg-brandGray hover:bg-brandBrown/10 text-brandBrown font-bold text-xs rounded-xl transition duration-150">
               Đăng xuất
             </button>
@@ -506,7 +510,9 @@
         }
 
         adminDriveTokenClient.callback = response => {
-          if (response.error) {
+          if (response.error || !response.access_token) {
+            reject(new Error("Bạn chưa cấp quyền Google Drive cho Admin CMS. Vui lòng bấm lại và chọn Cho phép."));
+            return;
             reject(new Error("Bạn chưa cấp quyền Google Drive cho Admin CMS."));
             return;
           }
@@ -527,6 +533,11 @@
     async function ensureAdminDriveAccess() {
       const accessToken = adminDriveAccessToken || await requestGoogleDriveAccessToken("consent");
 
+      if (!accessToken) {
+        adminDriveAccessToken = "";
+        throw new Error("Bạn chưa cấp quyền Google Drive cho Admin CMS. Vui lòng bấm lại và chọn Cho phép.");
+      }
+
       try {
         const res = await fetch("/api/admin-drive-auth", {
           method: "POST",
@@ -538,6 +549,10 @@
         });
         const data = await parseApiResponse(res);
         adminDriveEmail = data.email || "";
+        const statusEl = document.getElementById("adminDriveStatus");
+        if (statusEl && adminDriveEmail) {
+          statusEl.innerText = `Đã kết nối Google Drive: ${adminDriveEmail}`;
+        }
         return accessToken;
       } catch (err) {
         adminDriveAccessToken = "";
@@ -545,6 +560,18 @@
           throw new Error("Phiên Google Drive đã hết hạn. Vui lòng đăng nhập lại.");
         }
         throw err;
+      }
+    }
+
+    async function connectGoogleDrive() {
+      showLoader("Đang kết nối Google Drive...");
+      try {
+        await ensureAdminDriveAccess();
+        showToast(`Đã kết nối Google Drive: ${adminDriveEmail || "Admin"}`);
+      } catch (err) {
+        showApiError("Kết nối Google Drive thất bại", err, "Kết nối Google Drive thất bại");
+      } finally {
+        hideLoader();
       }
     }
 
@@ -647,6 +674,12 @@
 
     function enterAdminWorkspace(email) {
       document.getElementById("adminEmailBadge").innerText = email;
+      const driveStatusEl = document.getElementById("adminDriveStatus");
+      if (driveStatusEl) {
+        driveStatusEl.innerText = adminDriveEmail
+          ? `Đã kết nối Google Drive: ${adminDriveEmail}`
+          : "Google Drive chưa kết nối";
+      }
       document.getElementById("loginSection").classList.add("hidden");
       document.getElementById("workspaceSection").classList.remove("hidden");
       
@@ -663,6 +696,10 @@
       localStorage.removeItem("admin_session_token");
       adminDriveAccessToken = "";
       adminDriveEmail = "";
+      const driveStatusEl = document.getElementById("adminDriveStatus");
+      if (driveStatusEl) {
+        driveStatusEl.innerText = "Google Drive chưa kết nối";
+      }
       // Set expired cookie
       document.cookie = "admin_session_token=; Path=/; Max-Age=0; SameSite=Lax";
       location.reload();
