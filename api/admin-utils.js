@@ -180,6 +180,90 @@ export async function getDocsClient() {
   return google.docs({ version: "v1", auth });
 }
 
+export function buildAdminErrorHint(context, message, code, reason) {
+  const haystack = `${context || ""} ${message || ""} ${code || ""} ${reason || ""}`.toLowerCase();
+
+  if (String(code) === "403" || haystack.includes("caller does not have permission") || haystack.includes("permission")) {
+    return "Service Account chưa có quyền Editor với Google Sheet hoặc folder Drive.";
+  }
+
+  if (String(code) === "404" || haystack.includes("file not found") || haystack.includes("not found")) {
+    return "Folder ID hoặc File ID sai, hoặc Service Account chưa được chia sẻ quyền.";
+  }
+
+  if (haystack.includes("invalid_grant") || haystack.includes("google_private_key") || haystack.includes("private key")) {
+    return "Kiểm tra biến GOOGLE_PRIVATE_KEY trên Vercel, phải giữ đúng \\n.";
+  }
+
+  if (haystack.includes("google_sheet_id")) {
+    return "Thiếu hoặc sai GOOGLE_SHEET_ID trong Vercel.";
+  }
+
+  if (haystack.includes("google_client_email")) {
+    return "Thiếu GOOGLE_CLIENT_EMAIL hoặc Service Account email chưa đúng.";
+  }
+
+  if (haystack.includes("admin_emails") || haystack.includes("unauthorized")) {
+    return "Thiếu ADMIN_EMAILS hoặc Gmail đăng nhập chưa nằm trong danh sách admin.";
+  }
+
+  if (haystack.includes("mediaurls")) {
+    return "Sheet thiếu cột mediaUrls. Vào tab Lessons thêm cột mediaUrls.";
+  }
+
+  if (haystack.includes("payloadtoolargeerror") || haystack.includes("request entity too large") || haystack.includes("body too large")) {
+    return "File tải lên quá lớn. Hãy nén ảnh dưới 4MB.";
+  }
+
+  if (haystack.includes("google docs") || haystack.includes("document")) {
+    return "Tạo Google Docs lỗi. Kiểm tra quyền Service Account, folder Drive và nội dung công thức.";
+  }
+
+  if (haystack.includes("sheets") || haystack.includes("sheet") || haystack.includes("values.update") || haystack.includes("values.append")) {
+    return "Google Sheets update lỗi. Kiểm tra GOOGLE_SHEET_ID, tên tab, quyền Editor và cấu trúc cột.";
+  }
+
+  if (haystack.includes("drive")) {
+    return "Google Drive lỗi. Kiểm tra folder ID và quyền Editor của Service Account.";
+  }
+
+  return "Xem message, code, reason và extra để xác định API hoặc cấu hình đang lỗi.";
+}
+
+export function adminError(res, statusCode, context, err, extra = {}) {
+  const message = err?.message || String(err || "Unknown error");
+  const code = err?.code || err?.response?.status || err?.status || "";
+  const reason = err?.errors?.[0]?.reason || err?.response?.data?.error || "";
+  const googleErrors = err?.errors || err?.response?.data || null;
+
+  const safeExtra = { ...extra };
+  delete safeExtra.GOOGLE_PRIVATE_KEY;
+  delete safeExtra.BUNNY_STREAM_TOKEN_KEY;
+  delete safeExtra.SESSION_SECRET;
+  delete safeExtra.privateKey;
+  delete safeExtra.sessionSecret;
+
+  console.error(`[ADMIN_ERROR] ${context}`, {
+    statusCode,
+    message,
+    code,
+    reason,
+    googleErrors,
+    extra: safeExtra
+  });
+
+  return res.status(statusCode || 500).json({
+    success: false,
+    error: context,
+    message,
+    code,
+    reason,
+    googleErrors,
+    extra: safeExtra,
+    hint: buildAdminErrorHint(context, message, code, reason)
+  });
+}
+
 // Admin validation wrapper
 export async function getAdminEmailFromRequest(req) {
   const cookies = parseCookies(req);
