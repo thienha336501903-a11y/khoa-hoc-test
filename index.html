@@ -259,8 +259,6 @@
           </button>
         </div>
       </div>
-      <div id="lessonVideoList" class="mt-4 hidden"></div>
-      <div id="lessonImageGallery" class="mt-6 hidden"></div>
 
       <!-- Recipe Content Box -->
       <div class="mt-6 bg-white border border-brandBrown/5 rounded-2xl p-5 shadow-sm">
@@ -327,7 +325,6 @@
     let currentLessons = [];
     let currentView = "home";
     let currentLessonIndex = 0;
-    let currentMediaIndex = 0;
     
     // Pagination parameters for Mobile Lesson Checklist
     let currentPage = 0;
@@ -412,57 +409,6 @@
       return secure || raw;
     }
 
-    function lessonMediaItems(lesson) {
-      const items = Array.isArray(lesson?.mediaItems) ? lesson.mediaItems.filter(Boolean) : [];
-      if (items.length) return items;
-
-      const fallbackUrl = lessonVideoUrl(lesson);
-      if (!fallbackUrl) return [];
-
-      return [{
-        type: isYouTubeUrl(fallbackUrl) ? "youtube" : "video",
-        title: lesson?.title || "Video bài học",
-        url: lesson?.videoUrl || fallbackUrl,
-        secureUrl: lesson?.secureVideoUrl || "",
-        secureVideoUrl: lesson?.secureVideoUrl || "",
-        expiresAt: lesson?.secureVideoExpiresAt || 0,
-        secureVideoExpiresAt: lesson?.secureVideoExpiresAt || 0,
-        provider: lesson?.videoProvider || (isYouTubeUrl(fallbackUrl) ? "youtube" : "")
-      }];
-    }
-
-    function isVideoMediaItem(item) {
-      return item?.type === "video" || item?.type === "youtube" || item?.provider === "bunny_embed" || isYouTubeUrl(item?.url || "");
-    }
-
-    function lessonVideoItems(lesson) {
-      return lessonMediaItems(lesson).filter(isVideoMediaItem);
-    }
-
-    function lessonImageItems(lesson) {
-      return lessonMediaItems(lesson).filter(item => item?.type === "image" || item?.provider === "image");
-    }
-
-    function mediaItemVideoUrl(item) {
-      const secure = item?.secureUrl || item?.secureVideoUrl || "";
-      const raw = item?.url || "";
-
-      if (item?.provider === "bunny_embed" && secure) return secure;
-      if (isYouTubeUrl(raw)) return normalizeYouTubeEmbedUrl(raw);
-      if (isYouTubeUrl(secure)) return normalizeYouTubeEmbedUrl(secure);
-      return secure || raw;
-    }
-
-    function mediaItemImageUrl(item) {
-      return item?.directUrl || item?.previewUrl || item?.secureUrl || item?.url || "";
-    }
-
-    function selectedVideoItem(lesson, fallbackIndex = currentMediaIndex) {
-      const videos = lessonVideoItems(lesson);
-      if (!videos.length) return null;
-      return videos[Math.max(0, Math.min(fallbackIndex, videos.length - 1))] || videos[0];
-    }
-
     function setHeroImageSource(src) {
       const heroImage = document.getElementById("heroImage");
       if (!heroImage) return;
@@ -477,22 +423,18 @@
       heroImage.src = src || HERO_PLACEHOLDER_IMAGE;
     }
 
-    async function refreshCourseDataBeforePlayIfNeeded(index, mediaIndex = currentMediaIndex) {
+    async function refreshCourseDataBeforePlayIfNeeded(index) {
       const lesson = currentLessons[index];
       if (!lesson) return null;
 
-      const mediaItem = selectedVideoItem(lesson, mediaIndex);
-      const provider = mediaItem?.provider || lesson.videoProvider;
-
-      if (provider !== "bunny_embed") {
+      if (lesson.videoProvider !== "bunny_embed") {
         return lesson;
       }
 
-      const expiresAt = Number(mediaItem?.expiresAt || mediaItem?.secureVideoExpiresAt || lesson.secureVideoExpiresAt || 0);
-      const secureVideoUrl = mediaItem?.secureUrl || mediaItem?.secureVideoUrl || lesson.secureVideoUrl;
+      const expiresAt = Number(lesson.secureVideoExpiresAt || 0);
       const now = Math.floor(Date.now() / 1000);
 
-      if (expiresAt && expiresAt - now > 120 && secureVideoUrl) {
+      if (expiresAt && expiresAt - now > 120 && lesson.secureVideoUrl) {
         return lesson;
       }
 
@@ -693,6 +635,18 @@
       `;
     }
 
+    function getPCBlockedHtml() {
+      return `
+        <div class="w-full h-full bg-[#172317] p-6 flex flex-col items-center justify-center text-center text-white select-none">
+          <div class="text-4xl mb-3">📱</div>
+          <h4 class="font-extrabold text-base sm:text-lg text-green-400 mb-2">Hạn Chế Thiết Bị</h4>
+          <p class="text-xs sm:text-sm text-white/70 max-w-sm leading-relaxed">
+            Video chỉ xem được trên điện thoại di động (Safari/Chrome). Bạn vẫn có thể xem công thức và danh sách bài học trên máy tính.
+          </p>
+        </div>
+      `;
+    }
+
     function getIframePlayerHtml(secureUrl) {
       // Render clean iframe pointing to secureVideoUrl preserving token/expires query parameters
       return `
@@ -750,96 +704,6 @@
           </div>
         `;
       }
-    }
-
-    function renderLessonVideoList(lesson) {
-      const container = document.getElementById("lessonVideoList");
-      if (!container) return;
-
-      const videos = lessonVideoItems(lesson);
-      if (!videos.length) {
-        container.classList.add("hidden");
-        container.innerHTML = "";
-        return;
-      }
-
-      container.classList.remove("hidden");
-      container.innerHTML = `
-        <div class="bg-white border border-brandBrown/5 rounded-2xl p-4 shadow-sm">
-          <div class="font-black text-brandGreen text-sm mb-3">Video bài học</div>
-          <div class="flex gap-2 overflow-x-auto pb-1">
-            ${videos.map((item, index) => `
-              <button
-                class="shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold transition ${index === currentMediaIndex ? 'bg-brandGreen text-white shadow-sm' : 'bg-brandCream text-brandGreen hover:bg-brandGray'}"
-                onclick="selectLessonVideo(${index})">
-                ${escapeHtml(item.title || `Video ${index + 1}`)}
-              </button>
-            `).join("")}
-          </div>
-        </div>
-      `;
-    }
-
-    function renderLessonImageGallery(lesson) {
-      const container = document.getElementById("lessonImageGallery");
-      if (!container) return;
-
-      const images = lessonImageItems(lesson);
-      if (!images.length) {
-        container.classList.add("hidden");
-        container.innerHTML = "";
-        return;
-      }
-
-      container.classList.remove("hidden");
-      container.innerHTML = `
-        <div class="bg-white border border-brandBrown/5 rounded-2xl p-4 shadow-sm">
-          <div class="font-black text-brandGreen text-sm mb-3">Ảnh minh họa</div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            ${images.map((item, index) => {
-              const imageUrl = mediaItemImageUrl(item);
-              return `
-                <button class="group aspect-square rounded-xl overflow-hidden bg-brandGray border border-brandBrown/5 relative" onclick="openImagePreview(${index})">
-                  <img class="w-full h-full object-cover transition group-hover:scale-105" src="${imageUrl}" alt="${escapeHtml(item.title || `Ảnh ${index + 1}`)}">
-                  <span class="absolute inset-x-0 bottom-0 bg-brandBrown/65 text-white text-[11px] font-bold p-2 text-left line-clamp-2">${escapeHtml(item.title || `Ảnh ${index + 1}`)}</span>
-                </button>
-              `;
-            }).join("")}
-          </div>
-        </div>
-      `;
-    }
-
-    function renderLessonMediaSections(lesson) {
-      renderLessonVideoList(lesson);
-      renderLessonImageGallery(lesson);
-    }
-
-    async function selectLessonVideo(mediaIndex) {
-      currentMediaIndex = Math.max(0, Number(mediaIndex) || 0);
-      const lesson = currentLessons[currentLessonIndex];
-      renderLessonVideoList(lesson);
-      resetLessonVideoPreview(lesson);
-      await playMobileLessonVideo();
-    }
-
-    function openImagePreview(imageIndex) {
-      const lesson = currentLessons[currentLessonIndex];
-      const image = lessonImageItems(lesson)[imageIndex];
-      const imageUrl = mediaItemImageUrl(image);
-      if (!imageUrl) return;
-
-      const modal = document.createElement("div");
-      modal.className = "fixed inset-0 z-[80] bg-black/85 flex items-center justify-center p-4";
-      modal.onclick = () => modal.remove();
-      modal.innerHTML = `
-        <button class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white text-2xl font-bold" aria-label="Đóng">×</button>
-        <div class="max-w-5xl max-h-full" onclick="event.stopPropagation()">
-          <img class="max-w-full max-h-[82vh] object-contain rounded-xl shadow-2xl" src="${imageUrl}" alt="${escapeHtml(image.title || "Ảnh minh họa")}">
-          <div class="mt-3 text-center text-white text-sm font-bold">${escapeHtml(image.title || "Ảnh minh họa")}</div>
-        </div>
-      `;
-      document.body.appendChild(modal);
     }
 
     // Show authentication state in UI
@@ -992,7 +856,6 @@
         item.className = "bg-white border border-brandBrown/5 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition duration-200 grid gap-4 sm:grid-cols-[180px_1fr] md:grid-cols-[240px_1fr_200px] items-center";
 
         const thumb = l.thumbnailUrl || HERO_PLACEHOLDER_IMAGE;
-        const hasVideos = lessonVideoItems(l).length > 0;
 
         item.innerHTML = `
           <!-- Thumbnail -->
@@ -1019,7 +882,7 @@
           <!-- Buttons area (Visible beautifully on Desktop, or as quick access) -->
           <div class="flex sm:flex-col gap-2.5 sm:pl-4 sm:border-l border-brandBrown/5 justify-end">
             <button class="flex-1 sm:flex-none px-4 py-2.5 bg-brandGreen hover:bg-brandGreenLight text-white font-bold text-xs sm:text-sm rounded-xl transition duration-150 shadow-sm" onclick="openLessonVideo(${globalIdx})">
-              ${hasVideos ? '🎬 XEM VIDEO' : '🖼️ XEM BÀI'}
+              🎬 XEM VIDEO
             </button>
             <button class="flex-1 sm:flex-none px-4 py-2.5 bg-white border border-brandGreen/35 hover:bg-brandCream text-brandGreen font-bold text-xs sm:text-sm rounded-xl transition duration-150" onclick="openLessonRecipe(${globalIdx})">
               📄 CÔNG THỨC
@@ -1071,15 +934,21 @@
       const lesson = currentLessons[index];
       if (!lesson) return;
 
-      if (!lessonVideoItems(lesson).length) {
-        openLessonDetail(index);
+      const videoUrl = lessonVideoUrl(lesson);
+      if (!videoUrl && lesson.videoProvider !== "bunny_embed") {
+        alert("Bài học này chưa được liên kết video.");
         return;
       }
-      currentMediaIndex = 0;
 
       // Check CocCoc browser block first
       if (isCocCocBrowser()) {
         openCocCocWarningModal(lesson.title);
+        return;
+      }
+
+      // Check Mobile Only limitation
+      if (!isMobileDevice()) {
+        openPCWarningModal(lesson.title);
         return;
       }
 
@@ -1093,7 +962,7 @@
         return;
       }
 
-      if (!freshLesson || !mediaItemVideoUrl(selectedVideoItem(freshLesson, currentMediaIndex))) {
+      if (!freshLesson || !lessonVideoUrl(freshLesson)) {
         openLessonDetail(index);
         showMobileVideoExpiredMessage();
         return;
@@ -1107,9 +976,25 @@
         return;
       }
 
+      if (!isMobileDevice()) {
+        openPCWarningModal(freshLesson.title);
+        return;
+      }
+
       // If on mobile, open mobile details view instead of a modal
       openLessonDetail(freshIndex);
       await playMobileLessonVideo();
+    }
+
+    // Modal Trigger for PC user - blocks playback, explains policy
+    function openPCWarningModal(title) {
+      document.getElementById("modalTitle").innerText = title || "Video bài học";
+      const container = document.getElementById("desktopVideoContainer");
+      container.innerHTML = getPCBlockedHtml();
+      clearWatermarkFrom(container);
+      
+      document.getElementById("videoModal").classList.remove("hidden");
+      document.getElementById("videoModal").classList.add("flex");
     }
 
     // Modal Trigger for Cốc Cốc user - blocks playback, explains policy
@@ -1159,37 +1044,10 @@
       }
     }
 
-    function resetLessonVideoPreview(lesson) {
-      const videoBox = document.getElementById("mobileVideoBox");
-      if (!videoBox) return;
-
-      const videos = lessonVideoItems(lesson);
-      const videoItem = selectedVideoItem(lesson);
-
-      clearWatermarkFrom(videoBox);
-
-      if (!videos.length || !videoItem) {
-        videoBox.classList.add("hidden");
-        videoBox.innerHTML = "";
-        return;
-      }
-
-      videoBox.classList.remove("hidden");
-      videoBox.innerHTML = `
-        <div id="mobileVideoWrapper" class="relative w-full h-full flex-grow flex items-center justify-center bg-black">
-          <img id="mobileVideoThumb" class="absolute inset-0 w-full h-full object-cover opacity-75" src="${lesson.thumbnailUrl || HERO_PLACEHOLDER_IMAGE}" alt="Thumbnail">
-          <button class="relative z-10 w-16 h-16 rounded-full bg-brandGreen/90 hover:bg-brandGreen text-white text-2xl flex items-center justify-center shadow-lg transition transform active:scale-95" onclick="playMobileLessonVideo()">
-            ▶
-          </button>
-        </div>
-      `;
-    }
-
     // Detailed Mobile Lesson Page Interactions
     function openLessonDetail(index) {
       currentView = "lesson";
       currentLessonIndex = Math.max(0, Math.min(index, currentLessons.length - 1));
-      currentMediaIndex = 0;
       const l = currentLessons[currentLessonIndex] || {};
 
       document.getElementById("mobileLessonHeaderTitle").innerText = l.title || "Chi Tiết Bài Học";
@@ -1202,9 +1060,17 @@
       recipe.classList.add("max-h-[380px]");
       document.getElementById("recipeMoreBtn").innerHTML = `Xem thêm <span>▼</span>`;
 
-      // Set media preview state
-      resetLessonVideoPreview(l);
-      renderLessonMediaSections(l);
+      // Set video box preview state
+      destroyWatermark();
+      const videoBox = document.getElementById("mobileVideoBox");
+      videoBox.innerHTML = `
+        <div id="mobileVideoWrapper" class="relative w-full h-full flex-grow flex items-center justify-center bg-black">
+          <img id="mobileVideoThumb" class="absolute inset-0 w-full h-full object-cover opacity-75" src="${l.thumbnailUrl || HERO_PLACEHOLDER_IMAGE}" alt="Thumbnail">
+          <button class="relative z-10 w-16 h-16 rounded-full bg-brandGreen/90 hover:bg-brandGreen text-white text-2xl flex items-center justify-center shadow-lg transition transform active:scale-95" onclick="playMobileLessonVideo()">
+            ▶
+          </button>
+        </div>
+      `;
 
       // Show mobile view
       document.getElementById("homeView").classList.add("hidden");
@@ -1227,8 +1093,9 @@
       const lesson = currentLessons[lessonIndex];
       if (!lesson) return;
 
-      const initialVideoItem = selectedVideoItem(lesson);
-      if (!initialVideoItem) {
+      const initialVideoUrl = lessonVideoUrl(lesson);
+      if (!initialVideoUrl && lesson.videoProvider !== "bunny_embed") {
+        alert("Video chưa được cập nhật cho bài học này.");
         return;
       }
 
@@ -1242,9 +1109,16 @@
         return;
       }
 
+      // 2. Check PC/Laptop Block
+      if (!isMobileDevice()) {
+        wrapper.innerHTML = getPCBlockedHtml();
+        clearWatermarkFrom(wrapper);
+        return;
+      }
+
       let freshLesson = null;
       try {
-        freshLesson = await refreshCourseDataBeforePlayIfNeeded(lessonIndex, currentMediaIndex);
+        freshLesson = await refreshCourseDataBeforePlayIfNeeded(lessonIndex);
       } catch (err) {
         console.error("Refreshing Bunny video token failed:", err);
         wrapper.innerHTML = getVideoExpiredHtml();
@@ -1259,8 +1133,7 @@
       const freshIndex = findLessonIndex(freshLesson, lessonIndex);
       currentLessonIndex = Math.max(0, Math.min(freshIndex, currentLessons.length - 1));
 
-      const freshVideoItem = selectedVideoItem(freshLesson, currentMediaIndex);
-      const videoUrl = mediaItemVideoUrl(freshVideoItem);
+      const videoUrl = lessonVideoUrl(freshLesson);
       if (!videoUrl) {
         wrapper.innerHTML = getVideoExpiredHtml();
         return;
@@ -1273,9 +1146,15 @@
         return;
       }
 
+      if (!isMobileDevice()) {
+        wrapper.innerHTML = getPCBlockedHtml();
+        clearWatermarkFrom(wrapper);
+        return;
+      }
+
       // 3. Render clean Bunny Stream Iframe
       wrapper.innerHTML = getIframePlayerHtml(videoUrl);
-      if (shouldShowWatermarkForLesson(freshVideoItem)) {
+      if (shouldShowWatermarkForLesson(freshLesson)) {
         createWatermark(wrapper, getSavedEmail());
       } else {
         clearWatermarkFrom(wrapper);
