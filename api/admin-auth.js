@@ -5,7 +5,8 @@ import {
   createAdminSessionToken,
   verifyAdminSessionToken,
   cookieOptions,
-  parseCookies
+  parseCookies,
+  adminError
 } from "./admin-utils.js";
 
 const ADMIN_SESSION_COOKIE = "admin_session_token";
@@ -97,11 +98,10 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("Admin Auth Error:", err);
-    return res.status(500).json({
-      allowed: false,
-      error: "Server error",
-      detail: err.message
+    return adminError(res, 500, "Admin Google Login thất bại", err, {
+      api: "admin-auth",
+      hasGoogleClientId: Boolean(process.env.GOOGLE_CLIENT_ID),
+      adminEmailsConfigured: ADMIN_EMAILS.length
     });
   }
 }
