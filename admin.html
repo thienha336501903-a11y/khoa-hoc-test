@@ -733,10 +733,7 @@ function initDriveTokenClient() {
       if (!d.googleClientId) return;
       STATE.driveTokenClient = google.accounts.oauth2.initTokenClient({
         client_id: d.googleClientId,
-        scope: [
-          "https://www.googleapis.com/auth/drive.file",
-          "https://www.googleapis.com/auth/documents",
-        ].join(" "),
+        scope: "https://www.googleapis.com/auth/drive.file",
         callback: (response) => {
           if (response.error) {
             if (STATE.driveTokenReject) {
@@ -1172,7 +1169,9 @@ function addMediaBlock(type, titleVal = "", urlVal = "") {
 
   const div = document.createElement("div");
   div.className = "media-block";
-  div.dataset.type = type;
+  // ── data-media-block, data-media-type để buildMediaUrls() nhận diện chính xác
+  div.setAttribute("data-media-block", "");
+  div.setAttribute("data-media-type", type);
   div.id = id;
 
   div.innerHTML = `
@@ -1182,9 +1181,9 @@ function addMediaBlock(type, titleVal = "", urlVal = "") {
     </div>
     <div class="media-block-body">
       <div class="media-block-fields">
-        <input class="mb-title" type="text" placeholder="Tên hiển thị..." value="${escHtml(titleVal)}" />
+        <input data-media-title class="mb-title" type="text" placeholder="Tên hiển thị..." value="${escHtml(titleVal)}" />
         <div class="input-with-btn">
-          <input class="mb-url" type="text" placeholder="${placeholder}" value="${escHtml(urlVal)}" />
+          <input data-media-url class="mb-url" type="text" placeholder="${placeholder}" value="${escHtml(urlVal)}" />
           ${type === "image" ? `<label class="btn btn-orange btn-xs" style="cursor:pointer;white-space:nowrap;">Tải<input type="file" accept="image/*" class="hidden" onchange="handleImageUploadForBlock('${id}',this)" /></label>` : ""}
           <button class="btn btn-gray btn-xs" onclick="checkMediaBlock('${id}')">Kiểm tra</button>
         </div>
@@ -1254,18 +1253,31 @@ function checkMediaBlock(id) {
 }
 
 // ── BUILD mediaUrls ──────────────────────────────────────────────────────────
+// Dùng data-media-block / data-media-type / data-media-title / data-media-url
+// KHÔNG bỏ block nếu thiếu title — dùng title fallback theo type
 function buildMediaUrls() {
-  const blocks = document.querySelectorAll("#mediaBlocksContainer .media-block");
-  const lines = [];
-  blocks.forEach(block => {
-    const type  = block.dataset.type;
-    const title = block.querySelector(".mb-title").value.trim().replace(/[|\n\r]/g, "-");
-    const url   = block.querySelector(".mb-url").value.trim().replace(/[|\n\r]/g, "");
-    if (type && title && url) {
-      lines.push(`${type}|${title}|${url}`);
-    }
-  });
-  const result = lines.join("\n");
+  const blocks = Array.from(document.querySelectorAll("[data-media-block]"));
+
+  const result = blocks.map(block => {
+    const type = block.dataset.mediaType || "";
+    const titleInput = block.querySelector("[data-media-title]");
+    const urlInput   = block.querySelector("[data-media-url]");
+
+    const rawTitle = String(titleInput?.value || "").trim();
+    const url      = String(urlInput?.value   || "").trim().replace(/[|\n\r]/g, "");
+
+    if (!type || !url) return "";  // url bắt buộc; type bắt buộc
+
+    // Fallback title nếu user bỏ trống
+    const safeTitle = (rawTitle.replace(/[|\n\r]/g, "-") || (
+      type === "video"   ? "Video Bunny"  :
+      type === "youtube" ? "Video YouTube" :
+      "Ảnh"
+    ));
+
+    return `${type}|${safeTitle}|${url}`;
+  }).filter(Boolean).join("\n");
+
   console.log("MEDIA_URLS_BUILT", result);
   return result;
 }
@@ -1447,16 +1459,22 @@ async function saveLesson() {
   const thumbnailUrl = document.getElementById("fThumbnailUrl").value.trim();
   const videoUrl     = document.getElementById("fVideoUrl").value.trim();
   const recipeUrl    = document.getElementById("fRecipeUrl").value.trim();
-  const mediaUrls    = buildMediaUrls();
+
+  // ── mediaUrls: bắt buộc build trước validate ──────────────────────────────
+  const mediaUrls = buildMediaUrls();
+  console.log("MEDIA_BLOCKS_FOUND", document.querySelectorAll("[data-media-block]").length);
+  console.log("MEDIA_URLS_BUILT", mediaUrls);
 
   if (!course) { toast("Chọn khóa học trước.", "error"); return; }
   if (!lesson)  { toast("Nhập số bài học.", "error"); return; }
   if (!title)   { toast("Nhập tiêu đề bài học.", "error"); return; }
 
   const lessonData = { course, lesson, title, description, duration, level, status, thumbnailUrl, videoUrl, recipeUrl, mediaUrls };
+  // ── Đảm bảo mediaUrls luôn tồn tại trong lessonData ──────────────────────
+  lessonData.mediaUrls = mediaUrls;
 
   console.log("LESSON_DATA_BEFORE_SAVE", lessonData);
-  console.log("MEDIA_URLS_BUILT", mediaUrls);
+  console.log("LESSON_DATA_BEFORE_SAVE.mediaUrls", lessonData.mediaUrls);
 
   const payload = {
     action:         STATE.isEditMode ? "update" : "create",
