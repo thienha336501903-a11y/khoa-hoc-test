@@ -1264,54 +1264,99 @@ function addMediaBlock(type, titleVal = "", urlVal = "") {
 function checkMediaBlock(id) {
   const block = document.getElementById(id);
   if (!block) return;
-  const type = block.dataset.type;
+  const type = block.getAttribute("data-media-type") || block.dataset.mediaType;
   const urlInput = block.querySelector(".mb-url");
   const statusEl = block.querySelector(".mb-status");
   const previewEl = block.querySelector(".mb-preview");
-  const raw = urlInput.value.trim();
+  let raw = urlInput.value.trim();
   previewEl.innerHTML = "";
+  statusEl.innerHTML = "";
 
-  if (!raw) { statusEl.innerHTML = ""; return; }
+  if (!raw) {
+    statusEl.innerHTML = `<div class="media-block-status status-err">⚠ Vui lòng nhập URL hoặc mã nhúng.</div>`;
+    return;
+  }
 
-  if (type === "video") {
-    const bunny = parseBunnyUrl(raw);
+  // Làm sạch URL/iframe
+  let url = raw;
+  const iframeMatch = raw.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+  if (iframeMatch && iframeMatch[1]) {
+    url = iframeMatch[1];
+  }
+  url = url.replace(/&amp;/g, "&").trim();
+  urlInput.value = url; // Gán lại URL sạch vào input
+
+  // Nhận diện loại media & xử lý
+  // 1. YouTube
+  const yt = parseYouTubeUrl(url);
+  if (yt.ok) {
+    statusEl.innerHTML = `<div class="media-block-status status-ok">✓ YouTube hợp lệ — ID: <b>${yt.videoId}</b></div>`;
+    previewEl.innerHTML = `
+      <div class="aspect-video relative w-full max-w-sm rounded-xl overflow-hidden border border-brandBrown/10 mt-2" style="aspect-ratio:16/9;position:relative;width:100%;max-width:320px;">
+        <iframe class="absolute inset-0 w-full h-full border-0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" src="https://www.youtube.com/embed/${yt.videoId}?rel=0" allowfullscreen></iframe>
+      </div>`;
+    return;
+  }
+
+  // 2. Google Drive
+  const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+  const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([^&#]+)/) || url.match(/drive\.google\.com\/uc\?id=([^&#]+)/);
+  const driveId = (driveFileMatch ? driveFileMatch[1] : null) || (driveOpenMatch ? driveOpenMatch[1] : null);
+  if (driveId) {
+    const previewUrl = `https://drive.google.com/file/d/${driveId}/preview`;
+    statusEl.innerHTML = `<div class="media-block-status status-ok">✓ Google Drive hợp lệ — ID: <b>${driveId}</b></div>`;
+    previewEl.innerHTML = `
+      <div class="aspect-video relative w-full max-w-sm rounded-xl overflow-hidden border border-brandBrown/10 mt-2" style="aspect-ratio:16/9;position:relative;width:100%;max-width:320px;">
+        <iframe class="absolute inset-0 w-full h-full border-0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" src="${previewUrl}" allowfullscreen></iframe>
+      </div>`;
+    return;
+  }
+
+  // 3. Bunny Video
+  const isBunny = url.includes("mediadelivery.net") || url.includes("bunnycdn.com");
+  if (isBunny) {
+    const bunny = parseBunnyUrl(url);
     if (bunny.ok) {
-      urlInput.value = bunny.url;
-      statusEl.innerHTML = `<div class="media-block-status status-ok">✓ Bunny hợp lệ — Library: <b>${bunny.libraryId}</b> | Video: <b>${bunny.videoId}</b><br><small>Preview thật chỉ phát trên web học viên sau khi server ký token.</small></div>`;
+      statusEl.innerHTML = `<div class="media-block-status status-ok">✓ Bunny Video hợp lệ — Library: <b>${bunny.libraryId}</b> | Video: <b>${bunny.videoId}</b><br><small style="color:#6b7280;">Preview có thể không chạy trực tiếp tại đây do thiếu token ký bảo mật (sẽ tự động phát trên web học viên).</small></div>`;
+      previewEl.innerHTML = `
+        <div class="aspect-video relative w-full max-w-sm rounded-xl overflow-hidden border border-brandBrown/10 mt-2" style="aspect-ratio:16/9;position:relative;width:100%;max-width:320px;">
+          <iframe class="absolute inset-0 w-full h-full border-0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" src="${bunny.url}" allowfullscreen></iframe>
+        </div>`;
     } else {
-      statusEl.innerHTML = `<div class="media-block-status status-err">⚠ Không nhận ra Bunny link. Kiểm tra lại.</div>`;
+      statusEl.innerHTML = `<div class="media-block-status status-err">⚠ Link Bunny Video không đúng cấu trúc (thiếu Library ID hoặc Video ID).</div>`;
     }
     return;
   }
 
-  if (type === "youtube") {
-    const yt = parseYouTubeUrl(raw);
-    if (yt.ok) {
-      urlInput.value = yt.url;
-      statusEl.innerHTML = `<div class="media-block-status status-ok">✓ YouTube hợp lệ — ID: <b>${yt.videoId}</b></div>`;
-      previewEl.innerHTML = `<iframe src="https://www.youtube.com/embed/${yt.videoId}" allowfullscreen></iframe>`;
-    } else {
-      statusEl.innerHTML = `<div class="media-block-status status-err">⚠ Không nhận ra YouTube link.</div>`;
-    }
-    return;
-  }
-
-  if (type === "image") {
-    // Try to preview the image directly
-    let displayUrl = raw;
-    const driveMatch = raw.match(/drive\.google\.com\/file\/d\/([^/]+)/) || raw.match(/[?&]id=([^&]+)/);
-    if (driveMatch) displayUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+  // 4. Ảnh
+  const isImage = /\.(jpg|jpeg|png|webp|gif|svg)(?:\?.*)?$/i.test(url) || url.startsWith("data:image/");
+  if (isImage || type === "image") {
     statusEl.innerHTML = `<div class="media-block-status status-info">Đang kiểm tra ảnh...</div>`;
     const img = new Image();
     img.onload = () => {
       statusEl.innerHTML = `<div class="media-block-status status-ok">✓ Ảnh hợp lệ.</div>`;
-      previewEl.innerHTML = `<img src="${escHtml(displayUrl)}" alt="Preview" />`;
+      previewEl.innerHTML = `
+        <div class="mt-2 w-full max-w-sm rounded-xl overflow-hidden border border-brandBrown/10 bg-gray-50 p-2" style="max-width:320px;">
+          <img src="${escHtml(url)}" style="width:100%;max-height:200px;object-fit:contain;" alt="Preview" />
+        </div>`;
     };
     img.onerror = () => {
-      statusEl.innerHTML = `<div class="media-block-status status-err">⚠ Không tải được ảnh. Kiểm tra quyền chia sẻ Drive hoặc URL.</div>`;
+      statusEl.innerHTML = `<div class="media-block-status status-err">⚠ Không thể tải ảnh. Hãy kiểm tra URL hoặc quyền chia sẻ công khai.</div>`;
+      previewEl.innerHTML = `
+        <div class="mt-2">
+          <a href="${escHtml(url)}" target="_blank" rel="noopener noreferrer" class="btn btn-gray btn-xs">Mở thử link xem ảnh ↗</a>
+        </div>`;
     };
-    img.src = displayUrl;
+    img.src = url;
+    return;
   }
+
+  // 5. Link thường không nhận diện được
+  statusEl.innerHTML = `<div class="media-block-status status-info">⚠ Link không thuộc loại tự động nhận diện (Bunny/YouTube/Drive/Image).</div>`;
+  previewEl.innerHTML = `
+    <div class="mt-2">
+      <a href="${escHtml(url)}" target="_blank" rel="noopener noreferrer" class="btn btn-gray btn-xs" style="display:inline-block;padding:4px 8px;background:#e5e7eb;border-radius:6px;color:#374151;text-decoration:none;font-size:12px;">Mở thử link ↗</a>
+    </div>`;
 }
 
 // ── BUILD mediaUrls ──────────────────────────────────────────────────────────

@@ -123,6 +123,16 @@
       color: #D96B27;
       font-weight: bold;
     }
+    .recipe-render a {
+      color: #2563eb;
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      word-break: break-word;
+    }
+    .recipe-render a:hover {
+      color: #1d4ed8;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-brandOrange selection:text-white">
@@ -558,12 +568,15 @@
     }
 
     // Watermark dynamic text & position shifting logic
+    // Watermark dynamic text & position shifting logic
     let watermarkTimer = null;
     function createWatermark(containerEl, userEmail) {
-      // Clear previous watermark timers
-      if (watermarkTimer) {
-        clearInterval(watermarkTimer);
-        watermarkTimer = null;
+      if (!containerEl) return;
+
+      // Clear previous watermark timer for this specific container
+      if (containerEl.watermarkTimer) {
+        clearInterval(containerEl.watermarkTimer);
+        containerEl.watermarkTimer = null;
       }
 
       // Remove existing watermark overlays in container
@@ -604,11 +617,16 @@
       containerEl.appendChild(watermark);
       rotatePosition();
 
-      // Rotate every 10 seconds
-      watermarkTimer = setInterval(rotatePosition, 10000);
+      // Rotate every 10 seconds, stored on the element itself
+      containerEl.watermarkTimer = setInterval(rotatePosition, 10000);
     }
 
     function destroyWatermark() {
+      const mainWrapper = document.getElementById("mobileVideoWrapper");
+      if (mainWrapper && mainWrapper.watermarkTimer) {
+        clearInterval(mainWrapper.watermarkTimer);
+        mainWrapper.watermarkTimer = null;
+      }
       if (watermarkTimer) {
         clearInterval(watermarkTimer);
         watermarkTimer = null;
@@ -616,8 +634,11 @@
     }
 
     function clearWatermarkFrom(containerEl) {
-      destroyWatermark();
       if (!containerEl) return;
+      if (containerEl.watermarkTimer) {
+        clearInterval(containerEl.watermarkTimer);
+        containerEl.watermarkTimer = null;
+      }
       containerEl.querySelectorAll(".watermark-overlay").forEach(el => el.remove());
     }
 
@@ -774,6 +795,31 @@
         .replace(/'/g, "&#039;");
     }
 
+    function linkifyTextSafe(text) {
+      // Nhận diện http://, https://, www.
+      // Nhận diện các domain cụ thể: facebook.com, fb.com, shopee.vn, zalo.me, tiktok.com
+      const regex = /(https?:\/\/[^\s<>]+|www\.[^\s<>]+|(?:facebook\.com|fb\.com|shopee\.vn|zalo\.me|tiktok\.com)\/[^\s<>]*)/gi;
+      
+      return text.replace(regex, (match) => {
+        // Loại bỏ dấu câu ở cuối link nếu vô tình bắt trúng
+        let cleanUrl = match;
+        let suffix = "";
+        const puncMatch = match.match(/[.,;:?!]+$/);
+        if (puncMatch) {
+          cleanUrl = match.slice(0, -puncMatch[0].length);
+          suffix = puncMatch[0];
+        }
+
+        let href = cleanUrl;
+        if (/^www\./i.test(cleanUrl)) {
+          href = "https://" + cleanUrl;
+        } else if (!/^https?:\/\//i.test(cleanUrl)) {
+          href = "https://" + cleanUrl;
+        }
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>${suffix}`;
+      });
+    }
+
     function recipeTextToHtml(text) {
       const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
       const html = [];
@@ -799,18 +845,19 @@
             html.push("<ul>");
             listOpen = true;
           }
-          html.push(`<li>${escapeHtml(line.replace(/^[-*•]\s+/, ""))}</li>`);
+          const cleanText = escapeHtml(line.replace(/^[-*•]\s+/, ""));
+          html.push(`<li>${linkifyTextSafe(cleanText)}</li>`);
           return;
         }
 
         closeList();
 
         if (/^\d+[\).\s]/.test(line)) {
-          html.push(`<h4>${escapeHtml(line)}</h4>`);
+          html.push(`<h4>${linkifyTextSafe(escapeHtml(line))}</h4>`);
         } else if (line.length <= 80 && !/[.!?]$/.test(line)) {
-          html.push(`<h3>${escapeHtml(line)}</h3>`);
+          html.push(`<h3>${linkifyTextSafe(escapeHtml(line))}</h3>`);
         } else {
-          html.push(`<p>${escapeHtml(line)}</p>`);
+          html.push(`<p>${linkifyTextSafe(escapeHtml(line))}</p>`);
         }
       });
 
@@ -854,6 +901,10 @@
     function renderMediaItems(lesson) {
       const section = document.getElementById("mediaItemsSection");
       if (!section) return;
+
+      // Dọn dẹp watermark của các container cũ để tránh rò rỉ timer
+      const oldContainers = section.querySelectorAll("[data-bunny-media-container]");
+      oldContainers.forEach(c => clearWatermarkFrom(c));
 
       console.log("MEDIA_URLS_RAW", lesson?.mediaUrls);
       const parsedItems = parseMediaUrls(lesson?.mediaUrls);
@@ -943,10 +994,11 @@
               /^(https:\/\/iframe\.mediadelivery\.net\/)play\//,
               "$1embed/"
             );
+            const containerId = "bunny_media_" + Math.random().toString(36).substr(2, 9);
             return `
               <div class="bg-white border border-brandBrown/5 rounded-2xl overflow-hidden shadow-sm mb-4">
                 ${safeTitle ? `<div class="px-4 pt-4 font-bold text-sm text-brandBrown">${safeTitle}</div>` : ""}
-                <div class="aspect-video relative">
+                <div id="${containerId}" class="aspect-video relative" data-bunny-media-container>
                   <iframe
                     class="absolute inset-0 w-full h-full border-0"
                     src="${escapeHtml(src)}"
@@ -1065,6 +1117,12 @@
         ${html}
       `;
       section.classList.remove("hidden");
+
+      // Áp dụng watermark overlay động cho từng container video Bunny phụ
+      const bunnyContainers = section.querySelectorAll("[data-bunny-media-container]");
+      bunnyContainers.forEach(container => {
+        createWatermark(container, getSavedEmail());
+      });
 
       // Kích hoạt hiển thị cảnh báo sau 5 giây cho video Bunny nếu load chậm/trắng
       const warnings = section.querySelectorAll("[data-bunny-warning]");
