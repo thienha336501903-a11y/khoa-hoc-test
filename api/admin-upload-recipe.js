@@ -7,6 +7,7 @@ import { Readable } from "stream";
 import {
   getAdminFromRequest,
   getDriveClientWithToken,
+  getSheetsClient,
   errResponse,
 } from "./admin-utils.js";
 
@@ -143,11 +144,85 @@ export default async function handler(req, res) {
       docFile.data.webViewLink ||
       `https://docs.google.com/document/d/${fileId}/edit`;
 
+    // ── 7. Cập nhật recipeUrl vào Google Sheet (Lessons) ─────────────────────
+    let sheetUpdated = false;
+    let warning = null;
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    // Hàm phụ chuyển đổi chỉ số cột thành chữ cái cột (A-Z)
+    function getColLetter(colIdx) {
+      let temp = colIdx;
+      let letter = "";
+      while (temp >= 0) {
+        letter = String.fromCharCode((temp % 26) + 65) + letter;
+        temp = Math.floor(temp / 26) - 1;
+      }
+      return letter;
+    }
+
+    if (spreadsheetId) {
+      try {
+        const sheets = await getSheetsClient();
+        const sheetResult = await sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: "Lessons!A:Z",
+        });
+        const rows = sheetResult.data.values || [];
+
+        if (rows.length > 0) {
+          const headers = rows[0].map((h) => String(h).trim());
+          const courseColIdx = headers.indexOf("course");
+          const lessonColIdx = headers.indexOf("lesson");
+          const recipeUrlColIdx = headers.indexOf("recipeUrl");
+
+          if (courseColIdx !== -1 && lessonColIdx !== -1 && recipeUrlColIdx !== -1) {
+            let foundRowIdx = -1;
+            for (let i = 1; i < rows.length; i++) {
+              const row = rows[i];
+              if (
+                String(row[courseColIdx] || "").trim() === String(course).trim() &&
+                String(row[lessonColIdx] || "").trim() === String(lesson).trim()
+              ) {
+                foundRowIdx = i + 1;
+                break;
+              }
+            }
+
+            if (foundRowIdx !== -1) {
+              const colLetter = getColLetter(recipeUrlColIdx);
+              await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `Lessons!${colLetter}${foundRowIdx}`,
+                valueInputOption: "RAW",
+                requestBody: {
+                  values: [[recipeUrl]],
+                },
+              });
+              sheetUpdated = true;
+            } else {
+              warning = "Đã tạo Docs nhưng chưa tìm thấy bài học để cập nhật Sheet";
+            }
+          } else {
+            warning = "Đã tạo Docs nhưng tab Lessons thiếu cột course, lesson hoặc recipeUrl để cập nhật Sheet";
+          }
+        } else {
+          warning = "Đã tạo Docs nhưng không đọc được dữ liệu từ tab Lessons để cập nhật Sheet";
+        }
+      } catch (sheetErr) {
+        console.error("[admin-upload-recipe] Error updating sheet:", sheetErr);
+        warning = `Đã tạo Docs nhưng không thể cập nhật Google Sheet: ${sheetErr.message}`;
+      }
+    } else {
+      warning = "Đã tạo Docs nhưng thiếu GOOGLE_SHEET_ID để cập nhật Sheet";
+    }
+
     return res.status(200).json({
       success: true,
       recipeUrl,
       fileId,
       docName,
+      sheetUpdated,
+      ...(warning && { warning }),
     });
   } catch (err) {
     console.error("[admin-upload-recipe] Unexpected error:", err);
