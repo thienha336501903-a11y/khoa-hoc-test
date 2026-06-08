@@ -1219,7 +1219,46 @@ function parseYouTubeUrl(input) {
 // ── MEDIA BLOCKS ─────────────────────────────────────────────────────────────
 let blockIdCounter = 0;
 
+function getNextMediaTitle(type) {
+  // Lấy giá trị của ô videoUrl chính
+  const mainVideoUrlInput = document.getElementById("fVideoUrl");
+  const mainVideoUrl = mainVideoUrlInput ? mainVideoUrlInput.value.trim() : "";
+  
+  // Đếm các block hiện có trong container
+  const container = document.getElementById("mediaBlocksContainer");
+  const blocks = container ? container.querySelectorAll(".media-block") : [];
+  
+  let videoCount = 0;
+  let imageCount = 0;
+  
+  blocks.forEach(block => {
+    const blockType = block.getAttribute("data-media-type") || block.dataset.mediaType;
+    if (blockType === "video" || blockType === "youtube") {
+      videoCount++;
+    } else if (blockType === "image") {
+      imageCount++;
+    }
+  });
+
+  if (type === "video" || type === "youtube") {
+    // Bắt đầu từ 2 nếu ô videoUrl chính đang có dữ liệu, bắt đầu từ 1 nếu videoUrl chính trống.
+    const startIdx = mainVideoUrl ? 2 : 1;
+    const nextIdx = startIdx + videoCount;
+    return `Video ${nextIdx}`;
+  } else if (type === "image") {
+    // Luôn bắt đầu từ 1.
+    const nextIdx = 1 + imageCount;
+    return `Ảnh ${nextIdx}`;
+  }
+  return "";
+}
+
 function addMediaBlock(type, titleVal = "", urlVal = "") {
+  // Tự động gán title mặc định nếu không truyền (khi người dùng bấm thêm mới động)
+  if (!titleVal) {
+    titleVal = getNextMediaTitle(type);
+  }
+
   const id = `mb_${++blockIdCounter}`;
   const typeLabelClass = type === "video" ? "type-video" : type === "youtube" ? "type-youtube" : "type-image";
   const typeLabel = type === "video" ? "Bunny Video" : type === "youtube" ? "YouTube Video" : "Ảnh";
