@@ -1,12 +1,12 @@
-// api/admin-upload-recipe.js — REBUILT CLEAN 2026-06-07
-// Purpose: Create Google Doc on Drive using Gmail admin OAuth access token.
-// Does NOT use Service Account for Drive/Docs.
+// api/admin-upload-recipe.js — v2: Drive-only, no Docs API (2026-06-07)
+// Purpose: Tạo Google Docs công thức bằng Drive API upload text/plain + convert.
+// Scope yêu cầu: drive.file ONLY — không cần documents.
 // Called ONLY when user explicitly clicks "Tạo Google Docs từ công thức".
 
+import { Readable } from "stream";
 import {
   getAdminFromRequest,
   getDriveClientWithToken,
-  getDocsClientWithToken,
   errResponse,
 } from "./admin-utils.js";
 
@@ -74,30 +74,40 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── 5. Create Google Doc via admin OAuth ──────────────────────────────────
+    // ── 5. Upload text/plain → convert to Google Docs via Drive API ───────────
+    // Chỉ dùng drive.file scope, không cần documents scope.
+    // Drive API tự convert khi mimeType requestBody = Google Docs
+    // và media mimeType = text/plain.
     const drive = getDriveClientWithToken(accessToken);
-    const docs = getDocsClientWithToken(accessToken);
 
     const folderId = (process.env.GOOGLE_DRIVE_RECIPE_FOLDER_ID || "").trim();
     const docName = `${course} - ${lesson} - ${title}`;
 
-    const fileMetadata = {
+    const requestBody = {
       name: docName,
       mimeType: "application/vnd.google-apps.document",
     };
-    if (folderId) fileMetadata.parents = [folderId];
+    if (folderId) requestBody.parents = [folderId];
+
+    // Encode content as UTF-8 Buffer → Readable stream
+    const contentBuffer = Buffer.from(content, "utf8");
+    const bodyStream = Readable.from(contentBuffer);
 
     let docFile;
     try {
       docFile = await drive.files.create({
-        requestBody: fileMetadata,
-        fields: "id",
+        requestBody,
+        media: {
+          mimeType: "text/plain",
+          body: bodyStream,
+        },
+        fields: "id, webViewLink",
         supportsAllDrives: true,
       });
     } catch (err) {
       const gErr = err?.errors?.[0] || {};
       return errResponse(res, 500, {
-        error: "Tạo file Google Docs thất bại",
+        error: "Tạo Google Docs công thức thất bại (Drive API)",
         message: err.message,
         code: gErr.code,
         reason: gErr.reason,
@@ -109,37 +119,17 @@ export default async function handler(req, res) {
       });
     }
 
-    const documentId = docFile.data.id;
-    if (!documentId) {
+    const fileId = docFile.data.id;
+    if (!fileId) {
       return errResponse(res, 500, {
-        error: "Google API không trả về ID tài liệu",
+        error: "Google Drive API không trả về ID tài liệu",
       });
     }
 
-    // ── 6. Insert content ─────────────────────────────────────────────────────
-    try {
-      await docs.documents.batchUpdate({
-        documentId,
-        requestBody: {
-          requests: [{ insertText: { location: { index: 1 }, text: content } }],
-        },
-      });
-    } catch (err) {
-      const gErr = err?.errors?.[0] || {};
-      return errResponse(res, 500, {
-        error: "Ghi nội dung vào Google Docs thất bại",
-        message: err.message,
-        code: gErr.code,
-        reason: gErr.reason,
-        extra: { documentId, adminEmail: adminSession.email },
-        googleErrors: err?.errors,
-      });
-    }
-
-    // ── 7. Share as public reader ─────────────────────────────────────────────
+    // ── 6. Share as public reader ─────────────────────────────────────────────
     try {
       await drive.permissions.create({
-        fileId: documentId,
+        fileId,
         requestBody: { role: "reader", type: "anyone" },
         supportsAllDrives: true,
       });
@@ -148,12 +138,15 @@ export default async function handler(req, res) {
       // Not fatal — still return the URL
     }
 
-    const recipeUrl = `https://docs.google.com/document/d/${documentId}/edit`;
+    // Ưu tiên dùng webViewLink từ API; fallback build từ fileId
+    const recipeUrl =
+      docFile.data.webViewLink ||
+      `https://docs.google.com/document/d/${fileId}/edit`;
 
     return res.status(200).json({
       success: true,
       recipeUrl,
-      documentId,
+      fileId,
       docName,
     });
   } catch (err) {

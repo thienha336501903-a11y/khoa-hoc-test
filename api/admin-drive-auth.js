@@ -1,9 +1,13 @@
-// api/admin-drive-auth.js — REBUILT CLEAN 2026-06-07
-// Purpose: Verify Gmail admin OAuth access token for Drive/Docs.
+// api/admin-drive-auth.js — REBUILT CLEAN 2026-06-07 (v2: drive.file only)
+// Purpose: Verify Gmail admin OAuth access token for Drive.
+// Only requires scope: drive.file — no documents scope needed.
 // Called ONLY when user explicitly clicks "Kết nối Google Drive".
 // Never called on login, course load, or lesson load.
 
 import { getAdminFromRequest, isAdminEmail, normalizeEmail, errResponse } from "./admin-utils.js";
+
+// Scope yêu cầu — chỉ drive.file, không cần documents
+const REQUIRED_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -24,7 +28,6 @@ export default async function handler(req, res) {
     const { accessToken } = req.body || {};
 
     if (!accessToken || typeof accessToken !== "string" || !accessToken.trim()) {
-      // Return 200 with needsOAuth flag — not a 500 server error
       return res.status(200).json({
         success: false,
         needsOAuth: true,
@@ -68,25 +71,26 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── 5. Verify required scopes ─────────────────────────────────────────────
+    // ── 5. Verify drive.file scope (chỉ cần drive.file, không cần documents) ──
     const scope = String(tokenInfo.scope || "");
-    const hasDriveFile = scope.includes("drive.file") || scope.includes("https://www.googleapis.com/auth/drive.file");
-    const hasDocuments = scope.includes("documents") || scope.includes("https://www.googleapis.com/auth/documents");
+    const hasDriveFile =
+      scope.includes("drive.file") ||
+      scope.includes("https://www.googleapis.com/auth/drive.file");
 
-    if (!hasDriveFile || !hasDocuments) {
+    if (!hasDriveFile) {
       return res.status(200).json({
         success: false,
         needsOAuth: true,
-        error: "Token thiếu quyền cần thiết",
-        extra: { scope, hasDriveFile, hasDocuments },
-        hint: "Cần quyền drive.file và documents. Hãy bấm Kết nối Google Drive lại để xin đúng quyền.",
+        error: "Token thiếu quyền drive.file",
+        extra: { scope, hasDriveFile },
+        hint: `Cần scope: ${REQUIRED_SCOPE}. Hãy bấm Kết nối Google Drive lại để xin đúng quyền.`,
       });
     }
 
     return res.status(200).json({
       success: true,
       email: tokenEmail,
-      scopes: { hasDriveFile, hasDocuments },
+      scopes: { hasDriveFile },
     });
   } catch (err) {
     console.error("[admin-drive-auth] Unexpected error:", err);
