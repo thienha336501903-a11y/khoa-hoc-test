@@ -301,6 +301,62 @@ function attachSecureVideoUrl(lesson) {
   };
 }
 
+function signMediaUrls(lesson) {
+  const raw = lesson.mediaUrls || "";
+  if (!raw) return lesson;
+
+  const tokenKey = String(process.env.BUNNY_STREAM_TOKEN_KEY || "").trim();
+
+  const signedLines = raw.split("\n").map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return "";
+
+    const firstPipe = trimmed.indexOf("|");
+    if (firstPipe === -1) return line;
+    const secondPipe = trimmed.indexOf("|", firstPipe + 1);
+    if (secondPipe === -1) return line;
+
+    const type = trimmed.slice(0, firstPipe).trim();
+    const title = trimmed.slice(firstPipe + 1, secondPipe).trim();
+    const url = trimmed.slice(secondPipe + 1).trim();
+
+    if (type === "video") {
+      const parsed = parseBunnyVideoIdAndLibraryId(url);
+      if (parsed) {
+        const { libraryId, videoId } = parsed;
+
+        // 1. Preserve query if it already has token/expires
+        if (url.includes("token=") && url.includes("expires=")) {
+          return `${type}|${title}|${url}`;
+        }
+
+        // 2. Return error prefix if tokenKey is missing
+        if (!tokenKey) {
+          return `video|${title}|error:Thiếu BUNNY_STREAM_TOKEN_KEY nên không ký được media phụ Bunny`;
+        }
+
+        // 3. Generate token and sign
+        const expires = Math.floor(Date.now() / 1000) + 600;
+        const token = crypto
+          .createHash("sha256")
+          .update(`${tokenKey}${videoId}${expires}`)
+          .digest("hex");
+
+        const normalizedVideoUrl = `https://player.mediadelivery.net/embed/${libraryId}/${videoId}`;
+        const secureUrl = `${normalizedVideoUrl}?token=${token}&expires=${expires}`;
+        return `${type}|${title}|${secureUrl}`;
+      }
+    }
+
+    return line;
+  });
+
+  return {
+    ...lesson,
+    mediaUrls: signedLines.filter(Boolean).join("\n")
+  };
+}
+
 function recipeTextUrl(recipeUrl) {
   const url = String(recipeUrl || "").trim();
   if (!url) return "";
@@ -646,7 +702,8 @@ export default async function handler(req, res) {
         .map(row => rowToObject(lessonHeaders, row))
         .filter(l => String(l.course || "").trim() === courseSlug)
         .sort((a, b) => Number(a.lesson || 0) - Number(b.lesson || 0))
-        .map(attachSecureVideoUrl);
+        .map(attachSecureVideoUrl)
+        .map(signMediaUrls);
 
       lessons = await Promise.all(lessons.map(attachRecipeText));
     }
