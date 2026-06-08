@@ -1020,6 +1020,22 @@ async function loadLessons(course) {
   }
 }
 
+async function reloadLessonListOnly(course) {
+  if (!course) return;
+  try {
+    const r = await fetch(`/api/admin-lessons?course=${encodeURIComponent(course)}`, {
+      headers: authHeaders(),
+    });
+    const d = await r.json();
+    if (d.success) {
+      STATE.lessons = d.lessons || [];
+      renderLessonList();
+    }
+  } catch (e) {
+    console.error("Error reloading lesson list:", e);
+  }
+}
+
 function renderLessonList() {
   const container = document.getElementById("lessonList");
   if (STATE.lessons.length === 0) {
@@ -1415,7 +1431,7 @@ async function createGoogleDoc() {
     }
 
     if (course) {
-      await loadLessons(course);
+      await reloadLessonListOnly(course);
     }
   } catch (e) {
     toast("Lỗi kết nối khi tạo Google Docs", "error");

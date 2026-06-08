@@ -850,7 +850,6 @@
         })
         .filter(Boolean);
     }
-
     // ── Render mediaUrls items below video ────────────────────────────────────
     function renderMediaItems(lesson) {
       const section = document.getElementById("mediaItemsSection");
@@ -871,7 +870,15 @@
         const safeTitle = escapeHtml(item.title || "");
 
         if (item.type === "video") {
-          const url = item.url.trim();
+          const rawUrl = item.url.trim();
+          
+          // Trích xuất src nếu là thẻ iframe và làm sạch &amp;
+          let url = rawUrl;
+          const iframeMatch = rawUrl.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+          if (iframeMatch && iframeMatch[1]) {
+            url = iframeMatch[1];
+          }
+          url = url.replace(/&amp;/g, "&").trim();
 
           // a0. Check error prefix from backend
           if (url.startsWith("error:")) {
@@ -949,6 +956,9 @@
                     loading="lazy">
                   </iframe>
                 </div>
+                <div data-bunny-warning class="hidden p-3 bg-brandOrange/5 border-t border-brandOrange/10 text-brandOrange text-[11px] font-semibold flex items-center gap-1.5">
+                  ⚠️ Video Bunny chưa phát được? Kiểm tra token, expires hoặc Allowed Referrers trong Bunny.
+                </div>
               </div>`;
           }
 
@@ -988,7 +998,15 @@
         }
 
         if (item.type === "youtube") {
-          const ytId = getYouTubeVideoId(item.url);
+          const rawUrl = item.url.trim();
+          let url = rawUrl;
+          const iframeMatch = rawUrl.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+          if (iframeMatch && iframeMatch[1]) {
+            url = iframeMatch[1];
+          }
+          url = url.replace(/&amp;/g, "&").trim();
+
+          const ytId = getYouTubeVideoId(url);
           if (!ytId) return "";
           const embedSrc = `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&controls=1`;
           return `
@@ -1007,8 +1025,14 @@
         }
 
         if (item.type === "image") {
-          // Nếu là link Drive, convert sang uc?export=download
-          let imgSrc = item.url;
+          const rawUrl = item.url.trim();
+          let imgSrc = rawUrl;
+          const iframeMatch = rawUrl.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+          if (iframeMatch && iframeMatch[1]) {
+            imgSrc = iframeMatch[1];
+          }
+          imgSrc = imgSrc.replace(/&amp;/g, "&").trim();
+
           const driveMatch = imgSrc.match(/drive\.google\.com\/file\/d\/([^/]+)/);
           if (driveMatch) imgSrc = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
           return `
@@ -1041,6 +1065,14 @@
         ${html}
       `;
       section.classList.remove("hidden");
+
+      // Kích hoạt hiển thị cảnh báo sau 5 giây cho video Bunny nếu load chậm/trắng
+      const warnings = section.querySelectorAll("[data-bunny-warning]");
+      warnings.forEach(w => {
+        setTimeout(() => {
+          if (w) w.classList.remove("hidden");
+        }, 5000);
+      });
     }
 
     // Lesson Checklist Renderer
