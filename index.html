@@ -873,6 +873,15 @@
         if (item.type === "video") {
           const url = item.url.trim();
 
+          // a0. Check error prefix from backend
+          if (url.startsWith("error:")) {
+            const errMsg = url.replace("error:", "");
+            return `
+              <div class="bg-red-50 text-red-700 border border-red-200 rounded-2xl p-4 mb-4 font-semibold text-sm flex items-center gap-2">
+                <span>⚠️</span> ${escapeHtml(errMsg)}
+              </div>`;
+          }
+
           // a. YouTube
           const ytId = getYouTubeVideoId(url);
           if (ytId) {
