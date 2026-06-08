@@ -871,31 +871,110 @@
         const safeTitle = escapeHtml(item.title || "");
 
         if (item.type === "video") {
-          // Bunny iframe — normalize: đổi player → iframe nếu cần
-          let src = item.url;
-          // Normalize player.mediadelivery.net → iframe.mediadelivery.net
-          src = src.replace(
-            /^https?:\/\/player\.mediadelivery\.net\//,
-            "https://iframe.mediadelivery.net/"
-          );
-          // Đảm bảo dạng embed
-          src = src.replace(
-            /^(https:\/\/iframe\.mediadelivery\.net\/)play\//,
-            "$1embed/"
-          );
+          const url = item.url.trim();
+
+          // a. YouTube
+          const ytId = getYouTubeVideoId(url);
+          if (ytId) {
+            const embedSrc = `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&controls=1`;
+            return `
+              <div class="bg-white border border-brandBrown/5 rounded-2xl overflow-hidden shadow-sm mb-4">
+                ${safeTitle ? `<div class="px-4 pt-4 font-bold text-sm text-brandBrown">${safeTitle}</div>` : ""}
+                <div class="aspect-video relative">
+                  <iframe
+                    class="absolute inset-0 w-full h-full border-0"
+                    src="${escapeHtml(embedSrc)}"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowfullscreen
+                    loading="lazy">
+                  </iframe>
+                </div>
+              </div>`;
+          }
+
+          // b. Google Drive file/open/uc
+          const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+          const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([^&#]+)/) || url.match(/drive\.google\.com\/uc\?id=([^&#]+)/);
+          const driveId = (driveFileMatch ? driveFileMatch[1] : null) || (driveOpenMatch ? driveOpenMatch[1] : null);
+          if (driveId) {
+            const embedSrc = `https://drive.google.com/file/d/${driveId}/preview`;
+            return `
+              <div class="bg-white border border-brandBrown/5 rounded-2xl overflow-hidden shadow-sm mb-4">
+                ${safeTitle ? `<div class="px-4 pt-4 font-bold text-sm text-brandBrown">${safeTitle}</div>` : ""}
+                <div class="aspect-video relative">
+                  <iframe
+                    class="absolute inset-0 w-full h-full border-0"
+                    src="${escapeHtml(embedSrc)}"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowfullscreen
+                    loading="lazy">
+                  </iframe>
+                </div>
+              </div>`;
+          }
+
+          // c. Bunny (mediadelivery or bunnycdn)
+          const isBunny = url.includes("mediadelivery.net") || url.includes("bunnycdn.com");
+          if (isBunny) {
+            let src = url;
+            // Normalize player.mediadelivery.net → iframe.mediadelivery.net
+            src = src.replace(
+              /^https?:\/\/player\.mediadelivery\.net\//,
+              "https://iframe.mediadelivery.net/"
+            );
+            // Đảm bảo dạng embed
+            src = src.replace(
+              /^(https:\/\/iframe\.mediadelivery\.net\/)play\//,
+              "$1embed/"
+            );
+            return `
+              <div class="bg-white border border-brandBrown/5 rounded-2xl overflow-hidden shadow-sm mb-4">
+                ${safeTitle ? `<div class="px-4 pt-4 font-bold text-sm text-brandBrown">${safeTitle}</div>` : ""}
+                <div class="aspect-video relative">
+                  <iframe
+                    class="absolute inset-0 w-full h-full border-0"
+                    src="${escapeHtml(src)}"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowfullscreen
+                    referrerpolicy="origin"
+                    loading="lazy">
+                  </iframe>
+                </div>
+              </div>`;
+          }
+
+          // d. Link ảnh
+          const isImage = /\.(jpg|jpeg|png|webp|gif|svg)(?:\?.*)?$/i.test(url) || url.startsWith("data:image/");
+          if (isImage) {
+            return `
+              <div class="bg-white border border-brandBrown/5 rounded-2xl overflow-hidden shadow-sm mb-4">
+                ${safeTitle ? `<div class="px-4 pt-4 font-bold text-sm text-brandBrown">${safeTitle}</div>` : ""}
+                <div class="p-4">
+                  <img
+                    src="${escapeHtml(url)}"
+                    alt="${safeTitle}"
+                    class="w-full rounded-xl object-contain max-h-[400px] border border-brandBrown/5"
+                    loading="lazy"
+                  />
+                </div>
+              </div>`;
+          }
+
+          // e. Khác (Mở tài liệu/video)
           return `
-            <div class="bg-white border border-brandBrown/5 rounded-2xl overflow-hidden shadow-sm mb-4">
-              ${safeTitle ? `<div class="px-4 pt-4 font-bold text-sm text-brandBrown">${safeTitle}</div>` : ""}
-              <div class="aspect-video relative">
-                <iframe
-                  class="absolute inset-0 w-full h-full border-0"
-                  src="${escapeHtml(src)}"
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowfullscreen
-                  referrerpolicy="origin"
-                  loading="lazy">
-                </iframe>
+            <div class="bg-white border border-brandBrown/5 rounded-2xl overflow-hidden shadow-sm p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div class="font-bold text-sm text-brandBrown">${safeTitle || "Tài liệu đính kèm"}</div>
+                <div class="text-xs text-brandBrown/50 truncate max-w-[300px] sm:max-w-[400px] mt-0.5">${escapeHtml(url)}</div>
               </div>
+              <a
+                href="${escapeHtml(url)}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="px-4 py-2 bg-brandGreen hover:bg-brandGreen/90 text-white font-bold text-xs rounded-xl shadow-sm text-center transition flex-shrink-0"
+              >
+                Mở tài liệu/video ↗
+              </a>
             </div>`;
         }
 

@@ -705,14 +705,16 @@ function enterWorkspace(email, token) {
   // Initialize Drive token client (lazy — NOT triggered yet)
   initDriveTokenClient();
 
+  // Restore Drive token from storage
+  restoreDriveToken();
+
   // Load courses and config — NO Drive OAuth here
   loadCourses();
 }
 
 function logoutAdmin() {
   localStorage.removeItem("admin_session_token");
-  STATE.driveAccessToken = "";
-  STATE.driveTokenExpiry = 0;
+  clearDriveTokenStorage();
   location.reload();
 }
 
@@ -741,7 +743,7 @@ function initDriveTokenClient() {
               STATE.driveTokenReject = null;
               STATE.driveTokenResolve = null;
             }
-            updateDriveBadge(false);
+            clearDriveTokenStorage();
             return;
           }
           const token = response.access_token;
@@ -751,11 +753,13 @@ function initDriveTokenClient() {
               STATE.driveTokenReject = null;
               STATE.driveTokenResolve = null;
             }
-            updateDriveBadge(false);
+            clearDriveTokenStorage();
             return;
           }
           STATE.driveAccessToken = token;
           STATE.driveTokenExpiry = Date.now() + (response.expires_in || 3600) * 1000 - 30000;
+          localStorage.setItem("driveAccessToken", token);
+          localStorage.setItem("driveTokenExpiry", STATE.driveTokenExpiry);
           console.log("DRIVE_ACCESS_TOKEN_PRESENT", Boolean(STATE.driveAccessToken));
           updateDriveBadge(true);
 
@@ -779,6 +783,45 @@ function updateDriveBadge(connected) {
   } else {
     badge.textContent = "Drive: Chưa kết nối";
     badge.className = "";
+  }
+}
+
+function clearDriveTokenStorage() {
+  localStorage.removeItem("driveAccessToken");
+  localStorage.removeItem("driveTokenExpiry");
+  localStorage.removeItem("driveEmail");
+  STATE.driveAccessToken = "";
+  STATE.driveTokenExpiry = 0;
+  updateDriveBadge(false);
+}
+
+async function restoreDriveToken() {
+  const token = localStorage.getItem("driveAccessToken");
+  const expiry = localStorage.getItem("driveTokenExpiry");
+
+  if (token && expiry && Date.now() < Number(expiry)) {
+    // Thử xác thực với server trước khi chính thức chấp nhận
+    try {
+      const r = await fetch("/api/admin-drive-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionToken: STATE.sessionToken, accessToken: token }),
+      });
+      const d = await r.json();
+
+      if (d.success) {
+        STATE.driveAccessToken = token;
+        STATE.driveTokenExpiry = Number(expiry);
+        updateDriveBadge(true);
+        console.log("Drive token restored successfully from storage.");
+      } else {
+        clearDriveTokenStorage();
+      }
+    } catch (e) {
+      console.error("Error verifying restored Drive token:", e);
+    }
+  } else {
+    clearDriveTokenStorage();
   }
 }
 
@@ -843,17 +886,20 @@ async function connectDrive() {
     const d = await r.json();
 
     if (d.success) {
+      localStorage.setItem("driveAccessToken", token);
+      localStorage.setItem("driveTokenExpiry", STATE.driveTokenExpiry);
+      localStorage.setItem("driveEmail", d.email || "");
       updateDriveBadge(true);
       toast("Kết nối Google Drive thành công!");
     } else if (d.needsOAuth) {
-      updateDriveBadge(false);
+      clearDriveTokenStorage();
       toast(d.error || "Cần xin lại quyền Google Drive.", "error");
     } else {
-      updateDriveBadge(false);
+      clearDriveTokenStorage();
       showErrorModal(d, "Lỗi kết nối Drive");
     }
   } catch (e) {
-    updateDriveBadge(false);
+    clearDriveTokenStorage();
     toast("Bạn chưa cấp quyền Google Drive cho Admin CMS.", "error");
   }
 }
@@ -1361,7 +1407,16 @@ async function createGoogleDoc() {
     STATE.recipeFileBase64 = "";
     STATE.recipeFileName = "";
     document.getElementById("recipeFileInput").value = "";
-    toast("Tạo Google Docs thành công!");
+
+    if (d.warning) {
+      toast(d.warning, "warning");
+    } else {
+      toast("Tạo Google Docs thành công và cập nhật Google Sheet!");
+    }
+
+    if (course) {
+      await loadLessons(course);
+    }
   } catch (e) {
     toast("Lỗi kết nối khi tạo Google Docs", "error");
   } finally {
