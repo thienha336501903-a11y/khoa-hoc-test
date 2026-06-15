@@ -350,6 +350,33 @@
       return match?.[1] ? match[1].trim() : text;
     }
 
+    // ── Google Drive Helpers ───────────────────────────────────────────────
+    function getGoogleDriveFileId(input) {
+      const text = extractIframeSrc(String(input || "")).trim();
+      // /file/d/FILE_ID/...
+      let match = text.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+      if (match) return match[1];
+      // ?id=FILE_ID or &id=FILE_ID (open?id=, uc?id=)
+      match = text.match(/[?&]id=([^&#]+)/);
+      if (match) return match[1];
+      return "";
+    }
+
+    function isGoogleDriveVideoUrl(input) {
+      const text = extractIframeSrc(String(input || "")).trim();
+      return (
+        text.includes("drive.google.com/file/d/") ||
+        /drive\.google\.com\/open\?id=/.test(text) ||
+        /drive\.google\.com\/uc\?id=/.test(text)
+      );
+    }
+
+    function normalizeGoogleDrivePreviewUrl(input) {
+      const fileId = getGoogleDriveFileId(input);
+      if (!fileId) return "";
+      return `https://drive.google.com/file/d/${fileId}/preview`;
+    }
+
     // Extract YouTube Video ID
     function getYouTubeVideoId(input) {
       let text = extractIframeSrc(input).replace(/&amp;/g, "&").trim();
@@ -417,8 +444,23 @@
       const secure = lesson?.secureVideoUrl || "";
       const raw = lesson?.videoUrl || "";
 
-      if (lesson?.videoProvider === "bunny_embed" && secure) return secure;
-      if (isYouTubeUrl(raw)) return normalizeYouTubeEmbedUrl(raw);
+      // Bunny: dùng secureVideoUrl
+      if (lesson?.videoProvider === "bunny_embed") {
+        return secure;
+      }
+
+      // YouTube: dùng embed YouTube
+      if (isYouTubeUrl(raw)) {
+        return normalizeYouTubeEmbedUrl(raw);
+      }
+
+      // Google Drive: dùng preview URL
+      if (lesson?.videoProvider === "google_drive_preview" || isGoogleDriveVideoUrl(raw)) {
+        const preview = normalizeGoogleDrivePreviewUrl(raw || secure);
+        if (preview) return preview;
+      }
+
+      // Còn lại: dùng secureVideoUrl || raw
       return secure || raw;
     }
 
@@ -440,6 +482,7 @@
       const lesson = currentLessons[index];
       if (!lesson) return null;
 
+      // Only Bunny videos need token refresh
       if (lesson.videoProvider !== "bunny_embed") {
         return lesson;
       }
@@ -671,15 +714,17 @@
       `;
     }
 
-    function getIframePlayerHtml(secureUrl) {
-      // Render clean iframe pointing to secureVideoUrl preserving token/expires query parameters
+    function getIframePlayerHtml(url) {
+      // Detect if it's a Google Drive preview URL — no referrerpolicy needed
+      const isDrive = url.includes("drive.google.com");
+      // Render clean iframe pointing to url (Bunny signed URL, YouTube embed, or Drive preview)
       return `
         <iframe
           class="w-full h-full border-0 absolute inset-0 z-10"
-          src="${secureUrl}"
+          src="${url}"
           allow="autoplay; encrypted-media; picture-in-picture"
           allowfullscreen
-          referrerpolicy="origin"
+          ${isDrive ? "" : 'referrerpolicy="origin"'}
           loading="lazy">
         </iframe>
       `;
@@ -1241,7 +1286,9 @@
       if (!lesson) return;
 
       const videoUrl = lessonVideoUrl(lesson);
-      if (!videoUrl && lesson.videoProvider !== "bunny_embed") {
+      // Allow Google Drive and YouTube to proceed even without secureVideoUrl
+      const hasVideo = Boolean(videoUrl || isGoogleDriveVideoUrl(lesson.videoUrl) || isYouTubeUrl(lesson.videoUrl) || lesson.videoProvider === "bunny_embed" || lesson.videoProvider === "google_drive_preview");
+      if (!hasVideo) {
         alert("Bài học này chưa được liên kết video.");
         return;
       }
@@ -1403,7 +1450,9 @@
       if (!lesson) return;
 
       const initialVideoUrl = lessonVideoUrl(lesson);
-      if (!initialVideoUrl && lesson.videoProvider !== "bunny_embed") {
+      // Allow Google Drive and YouTube to proceed
+      const hasVideo = Boolean(initialVideoUrl || isGoogleDriveVideoUrl(lesson.videoUrl) || isYouTubeUrl(lesson.videoUrl) || lesson.videoProvider === "bunny_embed" || lesson.videoProvider === "google_drive_preview");
+      if (!hasVideo) {
         alert("Video chưa được cập nhật cho bài học này.");
         return;
       }
