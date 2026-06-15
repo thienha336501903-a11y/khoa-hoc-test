@@ -193,13 +193,30 @@ function getGoogleDocId(url) {
   return match ? match[1] : "";
 }
 
-function getGoogleDriveFileId(url) {
-  const text = String(url || "");
-  let match = text.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+function getGoogleDriveFileId(input) {
+  const text = extractIframeSrc(String(input || "")).trim();
+  // /file/d/FILE_ID/...
+  let match = text.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
   if (match) return match[1];
+  // ?id=FILE_ID or &id=FILE_ID (open?id=, uc?id=)
+  match = text.match(/[?&]id=([^&#]+)/);
+  if (match) return match[1];
+  return "";
+}
 
-  match = text.match(/[?&]id=([^&]+)/);
-  return match ? match[1] : "";
+function isGoogleDriveVideoUrl(input) {
+  const text = extractIframeSrc(String(input || "")).trim();
+  return (
+    text.includes("drive.google.com/file/d/") ||
+    /drive\.google\.com\/open\?id=/.test(text) ||
+    /drive\.google\.com\/uc\?id=/.test(text)
+  );
+}
+
+function normalizeGoogleDrivePreviewUrl(input) {
+  const fileId = getGoogleDriveFileId(input);
+  if (!fileId) return "";
+  return `https://drive.google.com/file/d/${fileId}/preview`;
 }
 
 function publicServiceEmail() {
@@ -294,7 +311,31 @@ function signBunnyEmbedUrl(videoUrl) {
 
 function attachSecureVideoUrl(lesson) {
   const videoUrl = lesson.videoUrl || "";
+
+  // 1. Check Google Drive first (no token signing needed)
+  if (isGoogleDriveVideoUrl(videoUrl)) {
+    const previewUrl = normalizeGoogleDrivePreviewUrl(videoUrl);
+    return {
+      ...lesson,
+      secureVideoUrl: previewUrl,
+      videoProvider: "google_drive_preview",
+      videoAuthStatus: "public_preview"
+    };
+  }
+
+  // 2. Try Bunny (signs token)
   const signedVideo = signBunnyEmbedUrl(videoUrl);
+
+  // 3. If not Bunny, check YouTube — pass raw through (frontend handles embed)
+  if (signedVideo.videoAuthStatus === "not_bunny_embed") {
+    return {
+      ...lesson,
+      secureVideoUrl: videoUrl,
+      videoProvider: "youtube_or_other",
+      videoAuthStatus: "passthrough"
+    };
+  }
+
   return {
     ...lesson,
     ...signedVideo
@@ -324,6 +365,13 @@ function signMediaUrls(lesson) {
     const url = extractIframeSrc(rawUrl).replace(/&amp;/g, "&").trim();
 
     if (type === "video") {
+      // a. Google Drive video → convert to preview URL, no Bunny token
+      if (isGoogleDriveVideoUrl(url)) {
+        const previewUrl = normalizeGoogleDrivePreviewUrl(url);
+        return `${type}|${title}|${previewUrl}`;
+      }
+
+      // b. Bunny video → sign token
       const parsed = parseBunnyVideoIdAndLibraryId(url);
       if (parsed) {
         const { libraryId, videoId } = parsed;
