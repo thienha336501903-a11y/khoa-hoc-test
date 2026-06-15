@@ -3,532 +3,87 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Google Drive Player</title>
+  <title>Trình phát Google Drive</title>
   <style>
     body, html {
       margin: 0;
       padding: 0;
-      background-color: #000;
-      color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      overflow: hidden;
       width: 100%;
       height: 100%;
+      background-color: #000;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    .back-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 999999;
+      padding: 12px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #2A4B2A; /* Brand green */
+      border: none;
+      border-radius: 999px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: background-color 0.2s, transform 0.1s;
+      outline: none;
       user-select: none;
       -webkit-user-select: none;
+      text-decoration: none;
     }
 
-    .video-container {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #000;
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-
-    /* Fallback display in case format is not supported or quota limit exceeded */
-    .fallback-container {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background-color: #000;
-      padding: 24px;
-      text-align: center;
-      z-index: 50;
-    }
-
-    .fallback-title {
-      font-weight: 800;
-      font-size: 16px;
-      color: #ffa500;
-      margin-bottom: 8px;
-    }
-
-    .fallback-desc {
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.7);
-      max-width: 320px;
-      line-height: 1.5;
-    }
-
-    .fallback-btn {
-      margin-top: 16px;
-      padding: 12px 24px;
-      background-color: #D96B27;
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      font-weight: bold;
-      font-size: 14px;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(217, 107, 39, 0.3);
-      transition: background-color 0.2s, transform 0.1s;
-    }
-
-    .fallback-btn:active {
+    .back-btn:active {
       transform: scale(0.95);
-    }
-
-    /* CSS bắt buộc */
-    .floating-controls,
-    .center-controls,
-    .quick-controls,
-    .big-play-row,
-    .drive-control-card,
-    .overlay-controls,
-    .mobile-controls {
-      display: none !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-    }
-
-    .player-controls {
-      position: fixed !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      height: 72px !important;
-      max-height: 72px !important;
-      background: rgba(0,0,0,.78) !important;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      z-index: 50 !important;
-      display: flex !important;
-      flex-direction: column !important;
-      justify-content: center !important;
-      padding: 0 16px !important;
-      box-sizing: border-box !important;
-      transition: opacity 0.35s ease, transform 0.35s ease;
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .video-stage {
-      height: calc(100vh - 72px) !important;
-      padding-bottom: 72px !important;
-      box-sizing: border-box !important;
-    }
-
-    .player-controls.hidden {
-      opacity: 0;
-      transform: translateY(10px);
-      pointer-events: none;
-    }
-
-    /* Progress Bar */
-    .progress-container {
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      height: 12px !important;
-      cursor: pointer;
-      z-index: 60 !important;
-      display: flex !important;
-      align-items: center !important;
-    }
-
-    .progress-bar-bg {
-      width: 100% !important;
-      height: 4px !important;
-      background: rgba(255, 255, 255, 0.25) !important;
-      position: relative !important;
-      border-radius: 0px !important;
-    }
-
-    .progress-bar-fill {
-      height: 100% !important;
-      width: 0%;
-      background-color: #D96B27 !important;
-      position: relative !important;
-    }
-
-    /* Controls button row */
-    .control-row {
-      display: flex !important;
-      align-items: center !important;
-      justify-content: flex-start !important;
-      width: 100% !important;
-      height: calc(100% - 12px) !important;
-      margin-top: 12px !important;
-      gap: 12px !important;
-    }
-
-    .control-btn {
-      background: none;
-      border: none;
-      color: #fff;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 6px;
-      border-radius: 50%;
-      transition: background-color 0.2s, transform 0.1s;
-      width: 36px;
-      height: 36px;
-      outline: none;
-      font-size: 14px;
-    }
-
-    .control-btn:hover {
-      background-color: rgba(255, 255, 255, 0.12);
-    }
-
-    .control-btn:active {
-      transform: scale(0.95);
-    }
-
-    .time-display {
-      font-size: 13px;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.85);
-      white-space: nowrap;
-      margin-left: 8px;
-    }
-
-    /* Icon adjustments */
-    .icon {
-      width: 18px;
-      height: 18px;
-      fill: currentColor;
-    }
-
-    .speed-btn {
-      font-weight: 700;
-      font-size: 11px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 6px;
-      padding: 2px 6px;
-      width: auto;
-      height: auto;
+      background-color: #1E351E;
     }
   </style>
 </head>
 <body>
 
-  <div class="video-container video-stage" id="videoContainer" onclick="toggleControlsVisibility()">
-    <video id="mainVideo" playsinline webkit-playsinline>
-      Trình duyệt của bạn không hỗ trợ phát video HTML5.
-    </video>
+  <!-- Floating Back Button -->
+  <button class="back-btn" onclick="goBack()">
+    ← Quay lại bài học
+  </button>
 
-    <!-- Fallback if failed -->
-    <div id="fallback" class="fallback-container hidden">
-      <div class="fallback-title">⚠️ Không thể phát inline</div>
-      <div class="fallback-desc">Video từ Google Drive này bị giới hạn lượt xem hoặc định dạng không hỗ trợ. Bấm vào nút bên dưới để mở xem trực tiếp.</div>
-      <button class="fallback-btn" onclick="openDriveDirectLink()">Mở bằng Google Drive ↗</button>
-    </div>
-
-    <!-- Bottom Controls Panel -->
-    <div id="controlsPanel" class="player-controls" onclick="event.stopPropagation()">
-      <!-- Progress Bar Row -->
-      <div class="progress-container" id="progressContainer">
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" id="progressBarFill"></div>
-        </div>
-      </div>
-
-      <!-- Button Row -->
-      <div class="control-row">
-        <!-- Play / Pause -->
-        <button id="playBtn" class="control-btn" title="Phát/Tạm dừng">
-          <svg class="icon" viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
-          <svg class="icon hidden" viewBox="0 0 24 24" id="pauseIcon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-        </button>
-
-        <!-- Rewind 10s -->
-        <button id="rewindBtn" class="control-btn" title="Lùi 10 giây">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8zm-1.78 9.57c-.12-.22-.18-.49-.18-.81V12.5c0-.32.06-.59.18-.81.12-.22.31-.39.56-.51s.57-.18.96-.18c.38 0 .7.06.94.18.25.12.43.29.56.51.12.22.19.49.19.81v.26c0 .32-.06.59-.19.81-.13.22-.31.39-.56.51-.25.12-.56.18-.94.18-.39 0-.71-.06-.96-.18-.25-.12-.44-.29-.56-.51zm1.5-1.92c-.08 0-.14.03-.18.09-.04.06-.06.15-.06.27v.3c0 .12.02.21.06.27.04.06.1.09.18.09.08 0 .14-.03.18-.09.04-.06.06-.15.06-.27v-.3c0-.12-.02-.21-.06-.27-.04-.06-.1-.09-.18-.09zm-4.14-.9h-.8v-.57h1.66v3.13h-.86v-1.66z"/></svg>
-        </button>
-
-        <!-- Forward 10s -->
-        <button id="forwardBtn" class="control-btn" title="Tiến 10 giây">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8zm1.78 9.57c-.12-.22-.18-.49-.18-.81V12.5c0-.32.06-.59.18-.81.12-.22.31-.39.56-.51s.57-.18.96-.18c.38 0 .7.06.94.18.25.12.43.29.56.51.12.22.19.49.19.81v.26c0 .32-.06.59-.19.81-.13.22-.31.39-.56.51-.25.12-.56.18-.94.18-.39 0-.71-.06-.96-.18-.25-.12-.44-.29-.56-.51zm1.5-1.92c-.08 0-.14.03-.18.09-.04.06-.06.15-.06.27v.3c0 .12.02.21.06.27.04.06.1.09.18.09.08 0 .14-.03.18-.09.04-.06.06-.15.06-.27v-.3c0-.12-.02-.21-.06-.27-.04-.06-.1-.09-.18-.09zm-4.14-.9h-.8v-.57h1.66v3.13h-.86v-1.66z"/></svg>
-        </button>
-
-        <!-- Current / Total Time -->
-        <span id="timeDisplay" class="time-display">00:00 / 00:00</span>
-
-        <!-- Spacer to push next buttons to the right -->
-        <div style="flex-grow: 1;"></div>
-
-        <!-- Speed -->
-        <button id="speedBtn" class="control-btn speed-btn" title="Tốc độ phát">1x</button>
-
-        <!-- Fullscreen -->
-        <button id="fullscreenBtn" class="control-btn" title="Toàn màn hình">
-          <svg class="icon" viewBox="0 0 24 24" id="fullscreenEnterIcon"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-          <svg class="icon hidden" viewBox="0 0 24 24" id="fullscreenExitIcon"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm11 11h-3v-3h-2v5h5v-2zm-2-11V5h-2v5h5V8h-3z"/></svg>
-        </button>
-      </div>
-    </div>
-    </div>
-  </div>
+  <!-- Google Drive Preview Iframe -->
+  <iframe id="playerIframe" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
 
   <script>
-    // ── GET FILE ID & CONSTRUCT DIRECT STREAM URL ──────────────────────────────────
     const urlParams = new URLSearchParams(window.location.search);
     const fileId = urlParams.get('id') || '';
-    
-    // Google Drive direct download stream URL
-    const streamUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download`;
-    const drivePreviewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-
-    const video = document.getElementById('mainVideo');
-    const fallback = document.getElementById('fallback');
+    const iframe = document.getElementById('playerIframe');
 
     if (fileId) {
-      video.src = streamUrl;
-      video.load();
+      iframe.src = `https://drive.google.com/file/d/${fileId}/preview`;
     } else {
-      showFallback();
+      alert('Không tìm thấy ID video Google Drive!');
     }
 
-    function openDriveDirectLink() {
-      window.open(drivePreviewUrl, "_blank", "noopener,noreferrer");
-    }
-
-    function showFallback() {
-      fallback.classList.remove('hidden');
-      document.getElementById('controlsPanel').classList.add('hidden');
-    }
-
-    // Handle video load error (e.g. quota exceeded or format not supported)
-    video.onerror = () => {
-      console.warn("Video failed to play inline. Displaying Google Drive fallback...");
-      showFallback();
-    };
-
-    // ── CONTROLS FUNCTIONALITY ───────────────────────────────────────────────────
-    const playBtn = document.getElementById('playBtn');
-    const playIcon = document.getElementById('playIcon');
-    const pauseIcon = document.getElementById('pauseIcon');
-    const rewindBtn = document.getElementById('rewindBtn');
-    const forwardBtn = document.getElementById('forwardBtn');
-    const timeDisplay = document.getElementById('timeDisplay');
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBarFill = document.getElementById('progressBarFill');
-    const muteBtn = document.getElementById('muteBtn');
-    const volumeUpIcon = document.getElementById('volumeUpIcon');
-    const volumeOffIcon = document.getElementById('volumeOffIcon');
-    const volumeSlider = document.getElementById('volumeSlider');
-    const speedBtn = document.getElementById('speedBtn');
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
-    const fullscreenEnterIcon = document.getElementById('fullscreenEnterIcon');
-    const fullscreenExitIcon = document.getElementById('fullscreenExitIcon');
-    const controlsPanel = document.getElementById('controlsPanel');
-    const videoContainer = document.getElementById('videoContainer');
-
-    // 1. Play / Pause
-    function togglePlay() {
-      if (video.paused || video.ended) {
-        video.play().catch(e => {
-          console.warn("Play blocked:", e);
-        });
-      } else {
-        video.pause();
-      }
-      resetHideTimer();
-    }
-    playBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      togglePlay();
-    });
-    video.addEventListener('play', () => {
-      playIcon.classList.add('hidden');
-      pauseIcon.classList.remove('hidden');
-      resetHideTimer();
-    });
-    video.addEventListener('pause', () => {
-      playIcon.classList.remove('hidden');
-      pauseIcon.classList.add('hidden');
-      showControls();
-    });
-
-    // 2. Rewind & Forward 10s
-    rewindBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      video.currentTime = Math.max(0, video.currentTime - 10);
-      resetHideTimer();
-    });
-    forwardBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      video.currentTime = Math.min(video.duration || 0, video.currentTime + 10);
-      resetHideTimer();
-    });
-
-    // 3. Time Formatter & Progress Update
-    function formatTime(secs) {
-      if (isNaN(secs) || secs === Infinity) return "00:00";
-      const m = Math.floor(secs / 60);
-      const s = Math.floor(secs % 60);
-      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    video.addEventListener('timeupdate', () => {
-      const current = video.currentTime;
-      const duration = video.duration || 0;
-      timeDisplay.textContent = `${formatTime(current)} / ${formatTime(duration)}`;
+    function goBack() {
+      const returnUrl = urlParams.get('returnUrl') || sessionStorage.getItem('courseReturnUrl');
       
-      if (duration > 0) {
-        const pct = (current / duration) * 100;
-        progressBarFill.style.width = `${pct}%`;
-      }
-    });
-
-    video.addEventListener('loadedmetadata', () => {
-      timeDisplay.textContent = `00:00 / ${formatTime(video.duration)}`;
-    });
-
-    // Seek on progress bar
-    progressContainer.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const rect = progressContainer.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const width = rect.width;
-      const duration = video.duration || 0;
-      if (duration > 0) {
-        video.currentTime = (clickX / width) * duration;
-      }
-      resetHideTimer();
-    });
-
-    // 4. Volume Control (Disabled/Guarded)
-    if (muteBtn && volumeSlider) {
-      let lastVolume = 1;
-      const toggleMute = () => {
-        if (video.muted) {
-          video.muted = false;
-          video.volume = lastVolume;
-          volumeSlider.value = lastVolume;
-          if (volumeUpIcon) volumeUpIcon.classList.remove('hidden');
-          if (volumeOffIcon) volumeOffIcon.classList.add('hidden');
-        } else {
-          lastVolume = video.volume;
-          video.muted = true;
-          video.volume = 0;
-          volumeSlider.value = 0;
-          if (volumeUpIcon) volumeUpIcon.classList.add('hidden');
-          if (volumeOffIcon) volumeOffIcon.classList.remove('hidden');
-        }
-        resetHideTimer();
-      };
-      muteBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleMute();
-      });
-      volumeSlider.addEventListener('input', (e) => {
-        e.stopPropagation();
-        const val = parseFloat(volumeSlider.value);
-        video.volume = val;
-        video.muted = (val === 0);
-        if (val === 0) {
-          if (volumeUpIcon) volumeUpIcon.classList.add('hidden');
-          if (volumeOffIcon) volumeOffIcon.classList.remove('hidden');
-        } else {
-          if (volumeUpIcon) volumeUpIcon.classList.remove('hidden');
-          if (volumeOffIcon) volumeOffIcon.classList.add('hidden');
-          lastVolume = val;
-        }
-        resetHideTimer();
-      });
-    }
-
-    // 5. Playback Speed Control
-    const speeds = [1, 1.25, 1.5, 2];
-    let speedIdx = 0;
-    speedBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      speedIdx = (speedIdx + 1) % speeds.length;
-      const newSpeed = speeds[speedIdx];
-      video.playbackRate = newSpeed;
-      speedBtn.textContent = `${newSpeed}x`;
-      resetHideTimer();
-    });
-
-    // 6. Fullscreen Control
-    function toggleFullscreen() {
-      if (!document.fullscreenElement) {
-        videoContainer.requestFullscreen().catch(err => {
-          console.warn("Fullscreen request rejected:", err);
-          // iOS Safari fallback
-          if (video.webkitEnterFullscreen) {
-            video.webkitEnterFullscreen();
-          }
-        });
+      if (returnUrl) {
+        window.location.href = returnUrl;
+      } else if (window.history.length > 1) {
+        window.history.back();
       } else {
-        document.exitFullscreen();
-      }
-      resetHideTimer();
-    }
-    fullscreenBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleFullscreen();
-    });
-
-    document.addEventListener('fullscreenchange', () => {
-      if (document.fullscreenElement) {
-        fullscreenEnterIcon.classList.add('hidden');
-        fullscreenExitIcon.classList.remove('hidden');
-      } else {
-        fullscreenEnterIcon.classList.remove('hidden');
-        fullscreenExitIcon.classList.add('hidden');
-      }
-    });
-
-    // 7. Auto Hide Controls Logic
-    let hideTimer = null;
-
-    function showControls() {
-      controlsPanel.classList.remove('hidden');
-      document.body.style.cursor = 'default';
-      resetHideTimer();
-    }
-
-    function hideControls() {
-      if (!video.paused && !video.ended) {
-        controlsPanel.classList.add('hidden');
-        document.body.style.cursor = 'none';
+        window.location.href = '/';
       }
     }
-
-    function resetHideTimer() {
-      clearTimeout(hideTimer);
-      if (!video.paused && !video.ended) {
-        hideTimer = setTimeout(hideControls, 3000);
-      }
-    }
-
-    function toggleControlsVisibility() {
-      if (controlsPanel.classList.contains('hidden')) {
-        showControls();
-      } else {
-        hideControls();
-      }
-    }
-
-    // Monitor hover/movement
-    videoContainer.addEventListener('mousemove', showControls);
-    videoContainer.addEventListener('touchstart', showControls);
-
-    // Initial show
-    showControls();
   </script>
 </body>
 </html>
