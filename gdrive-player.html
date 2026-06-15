@@ -85,24 +85,44 @@
       transform: scale(0.95);
     }
 
-    /* Minimalist Player Controls */
+    /* CSS bắt buộc */
+    .floating-controls,
+    .center-controls,
+    .quick-controls,
+    .big-play-row,
+    .drive-control-card,
+    .overlay-controls,
+    .mobile-controls {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
     .player-controls {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(0, 0, 0, 0.76);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      padding: 8px 16px;
-      padding-bottom: calc(8px + env(safe-area-inset-bottom));
-      z-index: 100;
+      position: fixed !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      height: 72px !important;
+      max-height: 72px !important;
+      background: rgba(0,0,0,.78) !important;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 50 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      padding: 0 16px !important;
+      box-sizing: border-box !important;
       transition: opacity 0.35s ease, transform 0.35s ease;
       opacity: 1;
       transform: translateY(0);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    }
+
+    .video-stage {
+      height: calc(100vh - 72px) !important;
+      padding-bottom: 72px !important;
+      box-sizing: border-box !important;
     }
 
     .player-controls.hidden {
@@ -113,43 +133,41 @@
 
     /* Progress Bar */
     .progress-container {
-      width: 100%;
-      height: 12px;
-      display: flex;
-      align-items: center;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      height: 12px !important;
       cursor: pointer;
-      position: relative;
+      z-index: 60 !important;
+      display: flex !important;
+      align-items: center !important;
     }
 
     .progress-bar-bg {
-      width: 100%;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.25);
-      border-radius: 2px;
-      position: relative;
+      width: 100% !important;
+      height: 4px !important;
+      background: rgba(255, 255, 255, 0.25) !important;
+      position: relative !important;
+      border-radius: 0px !important;
     }
 
     .progress-bar-fill {
-      height: 100%;
+      height: 100% !important;
       width: 0%;
-      background-color: #D96B27;
-      border-radius: 2px;
-      position: relative;
+      background-color: #D96B27 !important;
+      position: relative !important;
     }
 
     /* Controls button row */
     .control-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      flex-wrap: nowrap;
-    }
-
-    .control-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      width: 100% !important;
+      height: calc(100% - 12px) !important;
+      margin-top: 12px !important;
+      gap: 12px !important;
     }
 
     .control-btn {
@@ -162,9 +180,9 @@
       justify-content: center;
       padding: 6px;
       border-radius: 50%;
-      transition: background-color 0.2s;
-      width: 34px;
-      height: 34px;
+      transition: background-color 0.2s, transform 0.1s;
+      width: 36px;
+      height: 36px;
       outline: none;
       font-size: 14px;
     }
@@ -174,53 +192,15 @@
     }
 
     .control-btn:active {
-      transform: scale(0.9);
+      transform: scale(0.95);
     }
 
     .time-display {
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 600;
       color: rgba(255, 255, 255, 0.85);
       white-space: nowrap;
-      margin-left: 4px;
-    }
-
-    /* Volume slider */
-    .volume-container {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .volume-slider {
-      width: 50px;
-      height: 4px;
-      -webkit-appearance: none;
-      appearance: none;
-      background: rgba(255, 255, 255, 0.25);
-      border-radius: 2px;
-      outline: none;
-      margin: 0;
-      cursor: pointer;
-    }
-
-    .volume-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #fff;
-      cursor: pointer;
-    }
-
-    .volume-slider::-moz-range-thumb {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #fff;
-      cursor: pointer;
-      border: none;
+      margin-left: 8px;
     }
 
     /* Icon adjustments */
@@ -243,7 +223,7 @@
 </head>
 <body>
 
-  <div class="video-container" id="videoContainer" onclick="toggleControlsVisibility()">
+  <div class="video-container video-stage" id="videoContainer" onclick="toggleControlsVisibility()">
     <video id="mainVideo" playsinline webkit-playsinline>
       Trình duyệt của bạn không hỗ trợ phát video HTML5.
     </video>
@@ -266,49 +246,38 @@
 
       <!-- Button Row -->
       <div class="control-row">
-        <!-- Left buttons -->
-        <div class="control-group">
-          <!-- Play / Pause -->
-          <button id="playBtn" class="control-btn" title="Phát/Tạm dừng">
-            <svg class="icon" viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
-            <svg class="icon hidden" viewBox="0 0 24 24" id="pauseIcon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-          </button>
+        <!-- Play / Pause -->
+        <button id="playBtn" class="control-btn" title="Phát/Tạm dừng">
+          <svg class="icon" viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="icon hidden" viewBox="0 0 24 24" id="pauseIcon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
 
-          <!-- Rewind 10s -->
-          <button id="rewindBtn" class="control-btn" title="Lùi 10 giây">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8zm-1.78 9.57c-.12-.22-.18-.49-.18-.81V12.5c0-.32.06-.59.18-.81.12-.22.31-.39.56-.51s.57-.18.96-.18c.38 0 .7.06.94.18.25.12.43.29.56.51.12.22.19.49.19.81v.26c0 .32-.06.59-.19.81-.13.22-.31.39-.56.51-.25.12-.56.18-.94.18-.39 0-.71-.06-.96-.18-.25-.12-.44-.29-.56-.51zm1.5-1.92c-.08 0-.14.03-.18.09-.04.06-.06.15-.06.27v.3c0 .12.02.21.06.27.04.06.1.09.18.09.08 0 .14-.03.18-.09.04-.06.06-.15.06-.27v-.3c0-.12-.02-.21-.06-.27-.04-.06-.1-.09-.18-.09zm-4.14-.9h-.8v-.57h1.66v3.13h-.86v-1.66z"/></svg>
-          </button>
+        <!-- Rewind 10s -->
+        <button id="rewindBtn" class="control-btn" title="Lùi 10 giây">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8zm-1.78 9.57c-.12-.22-.18-.49-.18-.81V12.5c0-.32.06-.59.18-.81.12-.22.31-.39.56-.51s.57-.18.96-.18c.38 0 .7.06.94.18.25.12.43.29.56.51.12.22.19.49.19.81v.26c0 .32-.06.59-.19.81-.13.22-.31.39-.56.51-.25.12-.56.18-.94.18-.39 0-.71-.06-.96-.18-.25-.12-.44-.29-.56-.51zm1.5-1.92c-.08 0-.14.03-.18.09-.04.06-.06.15-.06.27v.3c0 .12.02.21.06.27.04.06.1.09.18.09.08 0 .14-.03.18-.09.04-.06.06-.15.06-.27v-.3c0-.12-.02-.21-.06-.27-.04-.06-.1-.09-.18-.09zm-4.14-.9h-.8v-.57h1.66v3.13h-.86v-1.66z"/></svg>
+        </button>
 
-          <!-- Forward 10s -->
-          <button id="forwardBtn" class="control-btn" title="Tiến 10 giây">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8zm1.78 9.57c-.12-.22-.18-.49-.18-.81V12.5c0-.32.06-.59.18-.81.12-.22.31-.39.56-.51s.57-.18.96-.18c.38 0 .7.06.94.18.25.12.43.29.56.51.12.22.19.49.19.81v.26c0 .32-.06.59-.19.81-.13.22-.31.39-.56.51-.25.12-.56.18-.94.18-.39 0-.71-.06-.96-.18-.25-.12-.44-.29-.56-.51zm1.5-1.92c-.08 0-.14.03-.18.09-.04.06-.06.15-.06.27v.3c0 .12.02.21.06.27.04.06.1.09.18.09.08 0 .14-.03.18-.09.04-.06.06-.15.06-.27v-.3c0-.12-.02-.21-.06-.27-.04-.06-.1-.09-.18-.09zm-4.14-.9h-.8v-.57h1.66v3.13h-.86v-1.66z"/></svg>
-          </button>
+        <!-- Forward 10s -->
+        <button id="forwardBtn" class="control-btn" title="Tiến 10 giây">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8zm1.78 9.57c-.12-.22-.18-.49-.18-.81V12.5c0-.32.06-.59.18-.81.12-.22.31-.39.56-.51s.57-.18.96-.18c.38 0 .7.06.94.18.25.12.43.29.56.51.12.22.19.49.19.81v.26c0 .32-.06.59-.19.81-.13.22-.31.39-.56.51-.25.12-.56.18-.94.18-.39 0-.71-.06-.96-.18-.25-.12-.44-.29-.56-.51zm1.5-1.92c-.08 0-.14.03-.18.09-.04.06-.06.15-.06.27v.3c0 .12.02.21.06.27.04.06.1.09.18.09.08 0 .14-.03.18-.09.04-.06.06-.15.06-.27v-.3c0-.12-.02-.21-.06-.27-.04-.06-.1-.09-.18-.09zm-4.14-.9h-.8v-.57h1.66v3.13h-.86v-1.66z"/></svg>
+        </button>
 
-          <!-- Current / Total Time -->
-          <span id="timeDisplay" class="time-display">00:00 / 00:00</span>
-        </div>
+        <!-- Current / Total Time -->
+        <span id="timeDisplay" class="time-display">00:00 / 00:00</span>
 
-        <!-- Right buttons -->
-        <div class="control-group">
-          <!-- Volume Container -->
-          <div class="volume-container">
-            <button id="muteBtn" class="control-btn" title="Âm lượng">
-              <svg class="icon" viewBox="0 0 24 24" id="volumeUpIcon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-              <svg class="icon hidden" viewBox="0 0 24 24" id="volumeOffIcon"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-            </button>
-            <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" class="volume-slider" title="Âm lượng" />
-          </div>
+        <!-- Spacer to push next buttons to the right -->
+        <div style="flex-grow: 1;"></div>
 
-          <!-- Speed -->
-          <button id="speedBtn" class="control-btn speed-btn" title="Tốc độ phát">1x</button>
+        <!-- Speed -->
+        <button id="speedBtn" class="control-btn speed-btn" title="Tốc độ phát">1x</button>
 
-          <!-- Fullscreen -->
-          <button id="fullscreenBtn" class="control-btn" title="Toàn màn hình">
-            <svg class="icon" viewBox="0 0 24 24" id="fullscreenEnterIcon"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-            <svg class="icon hidden" viewBox="0 0 24 24" id="fullscreenExitIcon"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm11 11h-3v-3h-2v5h5v-2zm-2-11V5h-2v5h5V8h-3z"/></svg>
-          </button>
-        </div>
+        <!-- Fullscreen -->
+        <button id="fullscreenBtn" class="control-btn" title="Toàn màn hình">
+          <svg class="icon" viewBox="0 0 24 24" id="fullscreenEnterIcon"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+          <svg class="icon hidden" viewBox="0 0 24 24" id="fullscreenExitIcon"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm11 11h-3v-3h-2v5h5v-2zm-2-11V5h-2v5h5V8h-3z"/></svg>
+        </button>
       </div>
+    </div>
     </div>
   </div>
 
@@ -440,44 +409,46 @@
       resetHideTimer();
     });
 
-    // 4. Volume Control
-    let lastVolume = 1;
-    function toggleMute() {
-      if (video.muted) {
-        video.muted = false;
-        video.volume = lastVolume;
-        volumeSlider.value = lastVolume;
-        volumeUpIcon.classList.remove('hidden');
-        volumeOffIcon.classList.add('hidden');
-      } else {
-        lastVolume = video.volume;
-        video.muted = true;
-        video.volume = 0;
-        volumeSlider.value = 0;
-        volumeUpIcon.classList.add('hidden');
-        volumeOffIcon.classList.remove('hidden');
-      }
-      resetHideTimer();
+    // 4. Volume Control (Disabled/Guarded)
+    if (muteBtn && volumeSlider) {
+      let lastVolume = 1;
+      const toggleMute = () => {
+        if (video.muted) {
+          video.muted = false;
+          video.volume = lastVolume;
+          volumeSlider.value = lastVolume;
+          if (volumeUpIcon) volumeUpIcon.classList.remove('hidden');
+          if (volumeOffIcon) volumeOffIcon.classList.add('hidden');
+        } else {
+          lastVolume = video.volume;
+          video.muted = true;
+          video.volume = 0;
+          volumeSlider.value = 0;
+          if (volumeUpIcon) volumeUpIcon.classList.add('hidden');
+          if (volumeOffIcon) volumeOffIcon.classList.remove('hidden');
+        }
+        resetHideTimer();
+      };
+      muteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMute();
+      });
+      volumeSlider.addEventListener('input', (e) => {
+        e.stopPropagation();
+        const val = parseFloat(volumeSlider.value);
+        video.volume = val;
+        video.muted = (val === 0);
+        if (val === 0) {
+          if (volumeUpIcon) volumeUpIcon.classList.add('hidden');
+          if (volumeOffIcon) volumeOffIcon.classList.remove('hidden');
+        } else {
+          if (volumeUpIcon) volumeUpIcon.classList.remove('hidden');
+          if (volumeOffIcon) volumeOffIcon.classList.add('hidden');
+          lastVolume = val;
+        }
+        resetHideTimer();
+      });
     }
-    muteBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleMute();
-    });
-    volumeSlider.addEventListener('input', (e) => {
-      e.stopPropagation();
-      const val = parseFloat(volumeSlider.value);
-      video.volume = val;
-      video.muted = (val === 0);
-      if (val === 0) {
-        volumeUpIcon.classList.add('hidden');
-        volumeOffIcon.classList.remove('hidden');
-      } else {
-        volumeUpIcon.classList.remove('hidden');
-        volumeOffIcon.classList.add('hidden');
-        lastVolume = val;
-      }
-      resetHideTimer();
-    });
 
     // 5. Playback Speed Control
     const speeds = [1, 1.25, 1.5, 2];
