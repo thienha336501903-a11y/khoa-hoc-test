@@ -725,7 +725,8 @@
       if (isDrive) {
         const previewUrl = normalizeGoogleDrivePreviewUrl(url) || url;
         const fileId = getGoogleDriveFileId(url);
-        const playerUrl = `/gdrive-player.html?id=${fileId}&returnUrl=${encodeURIComponent(window.location.href)}`;
+        const returnUrl = window.location.origin + window.location.pathname + '?course=' + encodeURIComponent(COURSE) + '&lesson=' + currentLessonIndex;
+        const playerUrl = `/gdrive-player.html?id=${fileId}&returnUrl=${encodeURIComponent(returnUrl)}`;
         return `
           <div class="relative w-full h-full flex items-center justify-center bg-black">
             <iframe
@@ -736,7 +737,7 @@
               loading="lazy"
               style="pointer-events: none;">
             </iframe>
-            <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-4 cursor-pointer" onclick="sessionStorage.setItem('courseReturnUrl', window.location.href); window.location.href='${playerUrl}'">
+            <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-4 cursor-pointer" onclick="sessionStorage.setItem('courseReturnUrl', '${returnUrl}'); window.location.href='${playerUrl}'">
               <div class="bg-brandGreen hover:bg-brandGreen/95 text-white font-extrabold text-base sm:text-lg px-6 py-3.5 rounded-full shadow-lg transition transform active:scale-95 mb-2.5">
                 ▶ Ấn vào đây để xem video
               </div>
@@ -1040,7 +1041,8 @@
           const driveId = (driveFileMatch ? driveFileMatch[1] : null) || (driveOpenMatch ? driveOpenMatch[1] : null);
           if (driveId) {
             const previewUrl = `https://drive.google.com/file/d/${driveId}/preview`;
-            const playerUrl = `/gdrive-player.html?id=${driveId}&returnUrl=${encodeURIComponent(window.location.href)}`;
+            const returnUrl = window.location.origin + window.location.pathname + '?course=' + encodeURIComponent(COURSE) + '&lesson=' + currentLessonIndex;
+            const playerUrl = `/gdrive-player.html?id=${driveId}&returnUrl=${encodeURIComponent(returnUrl)}`;
             return `
               <div class="bg-white border border-brandBrown/5 rounded-2xl overflow-hidden shadow-sm mb-4">
                 ${safeTitle ? `<div class="px-4 pt-4 font-bold text-sm text-brandBrown">${safeTitle}</div>` : ""}
@@ -1053,7 +1055,7 @@
                     loading="lazy"
                     style="pointer-events: none;">
                   </iframe>
-                  <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-4 cursor-pointer" onclick="sessionStorage.setItem('courseReturnUrl', window.location.href); window.location.href='${playerUrl}'">
+                  <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-4 cursor-pointer" onclick="sessionStorage.setItem('courseReturnUrl', '${returnUrl}'); window.location.href='${playerUrl}'">
                     <div class="bg-brandGreen hover:bg-brandGreen/95 text-white font-extrabold text-xs sm:text-sm px-4 py-2.5 rounded-full shadow-md transition transform active:scale-95 mb-1.5 select-none">
                       ▶ Ấn vào đây để xem video
                     </div>
@@ -1463,11 +1465,12 @@
       if (isDrive) {
         const previewUrl = normalizeGoogleDrivePreviewUrl(l.videoUrl || l.secureVideoUrl);
         const fileId = getGoogleDriveFileId(l.videoUrl || l.secureVideoUrl);
-        const playerUrl = `/gdrive-player.html?id=${fileId}&returnUrl=${encodeURIComponent(window.location.href)}`;
+        const returnUrl = window.location.origin + window.location.pathname + '?course=' + encodeURIComponent(COURSE) + '&lesson=' + currentLessonIndex;
+        const playerUrl = `/gdrive-player.html?id=${fileId}&returnUrl=${encodeURIComponent(returnUrl)}`;
         videoBox.innerHTML = `
           <div id="mobileVideoWrapper" class="relative w-full h-full flex-grow flex items-center justify-center bg-black">
             <iframe src="${previewUrl}" class="w-full h-full border-0 absolute inset-0 z-0 opacity-40" style="pointer-events: none;"></iframe>
-            <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-4 cursor-pointer" onclick="sessionStorage.setItem('courseReturnUrl', window.location.href); window.location.href='${playerUrl}'">
+            <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-4 cursor-pointer" onclick="sessionStorage.setItem('courseReturnUrl', '${returnUrl}'); window.location.href='${playerUrl}'">
               <div class="bg-brandGreen hover:bg-brandGreen/95 text-white font-extrabold text-base sm:text-lg px-6 py-3.5 rounded-full shadow-lg transition transform active:scale-95 mb-2.5">
                 ▶ Ấn vào đây để xem video
               </div>
@@ -1674,6 +1677,17 @@
 
         currentLessons = data.lessons || [];
         renderLessons(currentLessons);
+
+        // Auto-open specific lesson details if specified in URL query
+        const startLesson = new URLSearchParams(window.location.search).get("lesson");
+        if (startLesson !== null) {
+          const lIdx = parseInt(startLesson, 10);
+          if (!isNaN(lIdx) && lIdx >= 0 && lIdx < currentLessons.length) {
+            setTimeout(() => {
+              openLessonDetail(lIdx);
+            }, 100);
+          }
+        }
 
       } catch (err) {
         console.error("Course loading failed:", err);
