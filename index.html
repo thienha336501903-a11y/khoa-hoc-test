@@ -720,33 +720,31 @@
     }
 
     function getIframePlayerHtml(url) {
-      // Detect if it's a Google Drive preview URL — no referrerpolicy needed
       const isDrive = url.includes("drive.google.com");
       
-      const iframe = `
+      if (isDrive) {
+        const fileId = getGoogleDriveFileId(url);
+        return `
+          <iframe
+            class="w-full h-full border-0 absolute inset-0 z-10"
+            src="/gdrive-player.html?id=${fileId}"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowfullscreen
+            loading="lazy">
+          </iframe>
+        `;
+      }
+
+      return `
         <iframe
           class="w-full h-full border-0 absolute inset-0 z-10"
           src="${url}"
           allow="autoplay; encrypted-media; picture-in-picture"
           allowfullscreen
-          ${isDrive ? "" : 'referrerpolicy="origin"'}
+          referrerpolicy="origin"
           loading="lazy">
         </iframe>
       `;
-
-      if (isDrive) {
-        return `
-          ${iframe}
-          <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/30 backdrop-blur-[1px] p-4 text-center cursor-pointer select-none" onclick="openDriveVideo('${url}')">
-            <button class="px-6 py-4 bg-[#D96B27] hover:bg-[#D96B27]/90 text-white font-extrabold text-base sm:text-lg rounded-2xl shadow-xl transition transform active:scale-95 flex items-center gap-2 mb-2">
-              <span>▶️</span> Ấn vào đây để xem video
-            </button>
-            <span class="text-white text-xs sm:text-sm font-semibold drop-shadow-md">Video sẽ mở trong tab mới bằng Google Drive</span>
-          </div>
-        `;
-      }
-
-      return iframe;
     }
 
     function getVideoExpiredHtml() {
@@ -1028,24 +1026,17 @@
           const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([^&#]+)/) || url.match(/drive\.google\.com\/uc\?id=([^&#]+)/);
           const driveId = (driveFileMatch ? driveFileMatch[1] : null) || (driveOpenMatch ? driveOpenMatch[1] : null);
           if (driveId) {
-            const embedSrc = `https://drive.google.com/file/d/${driveId}/preview`;
             return `
               <div class="bg-white border border-brandBrown/5 rounded-2xl overflow-hidden shadow-sm mb-4">
                 ${safeTitle ? `<div class="px-4 pt-4 font-bold text-sm text-brandBrown">${safeTitle}</div>` : ""}
                 <div class="aspect-video relative">
                   <iframe
                     class="absolute inset-0 w-full h-full border-0"
-                    src="${escapeHtml(embedSrc)}"
+                    src="/gdrive-player.html?id=${driveId}"
                     allow="autoplay; encrypted-media; picture-in-picture"
                     allowfullscreen
                     loading="lazy">
                   </iframe>
-                  <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/30 backdrop-blur-[1px] p-4 text-center cursor-pointer select-none" onclick="openDriveVideo('${escapeHtml(embedSrc)}')">
-                    <button class="px-4 py-2.5 bg-[#D96B27] hover:bg-[#D96B27]/90 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition transform active:scale-95 flex items-center gap-1.5 mb-1">
-                      <span>▶️</span> Ấn xem video
-                    </button>
-                    <span class="text-white text-[10px] sm:text-xs font-semibold drop-shadow-md">Mở trong tab mới bằng Google Drive</span>
-                  </div>
                 </div>
               </div>`;
           }
