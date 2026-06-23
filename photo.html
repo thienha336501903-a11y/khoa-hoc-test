@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Học Nấu Ăn Qua Ảnh - Premium Culinary Gallery</title>
+  <title>Khóa Học Hình Ảnh - Culinary Gallery</title>
 
-  <!-- Google Fonts & Identity SDK -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://accounts.google.com/gsi/client"></script>
 
   <!-- Tailwind Configuration for Luxury Theme -->
   <script>
@@ -63,10 +62,10 @@
 
     /* Soft entry animation */
     .fade-in {
-      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
+      from { opacity: 0; transform: translateY(12px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
@@ -124,198 +123,128 @@
 </head>
 <body class="min-h-screen flex flex-col selection:bg-luxuryGold selection:text-luxuryCharcoal">
 
-  <!-- HOME VIEW CONTAINER -->
-  <div id="homeView" class="flex-grow flex flex-col fade-in">
-    <!-- Header -->
-    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 border-b border-luxurySoftGray shadow-sm transition-all duration-300">
-      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-        <!-- Brand Logo -->
-        <div class="flex items-center gap-2.5">
-          <span class="text-2xl filter drop-shadow">📖</span>
-          <span id="siteTitle" class="font-bold tracking-tight text-lg sm:text-xl text-luxuryEmerald uppercase">Culinary Gallery</span>
-        </div>
-
-        <!-- Auth Area -->
-        <div id="loginArea">
-          <!-- Default State: Loading -->
-          <div id="googleBtn" class="min-h-[38px] flex items-center justify-end"></div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Hero Section -->
-    <section class="relative bg-gradient-to-b from-white to-luxuryCream overflow-hidden py-12 md:py-16 border-b border-luxurySoftGray">
-      <div class="max-w-6xl mx-auto px-4 sm:px-6 relative z-10 grid md:grid-cols-12 gap-8 items-center">
-        <!-- Content -->
-        <div class="md:col-span-7 flex flex-col items-start text-left">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-luxuryEmerald/10 text-luxuryEmerald font-semibold text-xs uppercase tracking-wider mb-5">
-            <span>✨</span> Học Qua Album Ảnh Độc Quyền
-          </div>
-          <h1 id="courseTitle" class="serif-title text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-luxuryCharcoal leading-tight mb-4">
-            Khóa Học Nấu Ăn <br><span class="text-luxuryGold font-serif italic font-normal">Qua Hình Ảnh</span>
-          </h1>
-          <p id="courseSubtitle" class="text-sm sm:text-base text-luxuryEmeraldLight font-medium mb-6 max-w-xl">
-            Tài liệu công thức nấu ăn, chi tiết từng bước bằng album hình ảnh chất lượng cao dễ dàng theo dõi.
-          </p>
-
-          <button onclick="scrollToLessons()" class="px-7 py-3.5 bg-luxuryEmerald hover:bg-luxuryEmeraldLight text-white rounded-xl font-semibold text-sm shadow-md shadow-luxuryEmerald/20 hover:shadow-luxuryEmerald/30 hover:-translate-y-0.5 transition duration-200 inline-flex items-center gap-2.5 group">
-            BẮT ĐẦU HỌC NGAY
-            <span class="bg-white/10 rounded-full w-5 h-5 flex items-center justify-center group-hover:translate-x-1 transition-transform">→</span>
-          </button>
-        </div>
-
-        <!-- Hero Image Card -->
-        <div class="md:col-span-5 relative">
-          <div class="absolute -inset-1 bg-gradient-to-r from-luxuryGold to-luxuryEmerald rounded-2xl blur opacity-25"></div>
-          <div class="relative bg-white p-2.5 rounded-2xl shadow-xl border border-luxurySoftGray">
-            <img id="heroImage" class="w-full aspect-[4/3] object-cover rounded-xl shadow-inner bg-luxurySoftGray opacity-0 transition-opacity duration-500" src="" alt="Banners">
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Main Course Contents -->
-    <main id="lessonsSection" class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex-grow w-full">
-      <div class="text-center max-w-2xl mx-auto mb-8">
-        <h2 class="serif-title text-3xl font-bold tracking-tight text-luxuryCharcoal mb-2">✦ Album Bài Học ✦</h2>
-        <p id="lessonCount" class="text-xs sm:text-sm text-luxuryEmeraldLight font-semibold">Đăng nhập tài khoản học viên để bắt đầu</p>
+  <!-- Header -->
+  <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 border-b border-luxurySoftGray shadow-sm">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-2.5">
+        <span class="text-2xl filter drop-shadow">📖</span>
+        <span id="siteTitle" class="font-bold tracking-tight text-lg sm:text-xl text-luxuryEmerald uppercase">Culinary Gallery</span>
       </div>
 
-      <!-- Unauthorized status / Prompt login -->
-      <div id="statusBox" class="bg-white border border-luxurySoftGray rounded-2xl p-8 text-center max-w-md mx-auto shadow-md">
-        <div class="text-3xl mb-3">🔑</div>
-        <p class="font-bold text-lg text-luxuryCharcoal mb-2">Vui lòng đăng nhập Gmail</p>
-        <p class="text-luxuryCharcoal/60 text-xs leading-relaxed">Hệ thống sẽ tự động kiểm tra quyền truy cập khóa học hình ảnh của bạn sau khi đăng nhập.</p>
+      <!-- Course Badge -->
+      <div class="px-3.5 py-1 rounded-full bg-luxuryEmerald/10 text-luxuryEmerald font-semibold text-xs border border-luxuryEmerald/20" id="courseBadge">
+        Đang tải...
       </div>
+    </div>
+  </header>
 
-      <!-- Lessons Grid -->
-      <div id="lessonList" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 hidden">
-        <!-- Appended by JavaScript -->
-      </div>
-    </main>
+  <!-- LOADING CONTAINER -->
+  <div id="loadingView" class="flex-grow flex flex-col items-center justify-center py-20">
+    <div class="flex flex-col items-center gap-4">
+      <div class="w-8 h-8 border-4 border-luxuryEmerald border-t-transparent rounded-full animate-spin"></div>
+      <span class="font-semibold text-luxuryCharcoal/60 text-sm">Đang tải album bài học...</span>
+    </div>
   </div>
 
-  <!-- DETAILED LESSON PAGE CONTAINER -->
-  <section id="detailLessonPage" class="hidden min-h-screen bg-luxuryCream flex flex-col fade-in">
-    <!-- Header -->
-    <div class="bg-white border-b border-luxurySoftGray py-4 px-4 sticky top-0 z-50 flex items-center justify-between gap-4">
-      <button class="w-9 h-9 rounded-full bg-luxuryCream hover:bg-luxurySoftGray flex items-center justify-center text-luxuryEmerald text-xl font-bold shadow-sm transition" onclick="goHomeView()">
-        ‹
+  <!-- ERROR CONTAINER -->
+  <div id="errorView" class="hidden flex-grow flex flex-col items-center justify-center py-20 px-4">
+    <div class="bg-white border border-luxurySoftGray rounded-2xl p-8 text-center max-w-md mx-auto shadow-md fade-in">
+      <div class="text-4xl mb-3">⚠️</div>
+      <p class="font-bold text-lg text-luxuryGold mb-2" id="errorTitle">Không tìm thấy tài liệu</p>
+      <p class="text-luxuryCharcoal/60 text-xs leading-relaxed mb-4" id="errorMsg">Đường dẫn bài học không hợp lệ hoặc bài học chưa được cấu hình hình ảnh.</p>
+      <button onclick="location.reload()" class="px-5 py-2 bg-luxuryEmerald text-white font-semibold text-xs rounded-xl shadow transition hover:bg-luxuryEmeraldLight">
+        Tải lại trang
       </button>
-      <div class="font-bold text-sm sm:text-base text-luxuryCharcoal truncate text-center flex-grow" id="detailLessonHeaderTitle">
-        Chi tiết bài học
-      </div>
-      <div id="detailLessonAuthIndicator" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-luxuryEmerald/10 text-luxuryEmerald font-semibold text-xs truncate max-w-[120px]">
-        Đang kiểm tra...
-      </div>
     </div>
+  </div>
 
-    <!-- Scrollable Detail Body -->
-    <div class="flex-grow overflow-y-auto px-4 py-6 max-w-4xl mx-auto w-full grid md:grid-cols-12 gap-6 items-start">
-      
-      <!-- Left side: Album Gallery (col-span-7) -->
-      <div class="md:col-span-7 flex flex-col gap-4">
-        <!-- Main Image View -->
-        <div class="bg-luxuryCharcoal rounded-2xl overflow-hidden aspect-[4/3] shadow-lg border border-luxurySoftGray relative group">
-          <img id="galleryMainImg" class="w-full h-full object-contain bg-luxuryCharcoal transition duration-300" src="" alt="Main Image">
-          
-          <!-- Image Index Tag -->
-          <div class="absolute bottom-4 right-4 px-3 py-1 bg-black/60 backdrop-blur text-white text-xs font-semibold rounded-full select-none" id="galleryIndexTag">
-            1/1
-          </div>
-
-          <!-- Navigation Arrow Overlays -->
-          <button class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center text-lg opacity-0 group-hover:opacity-100 transition duration-250" onclick="prevGalleryImage()">
-            ‹
-          </button>
-          <button class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center text-lg opacity-0 group-hover:opacity-100 transition duration-250" onclick="nextGalleryImage()">
-            ›
-          </button>
+  <!-- MAIN LESSON CONTAINER -->
+  <main id="lessonView" class="hidden flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-8 w-full grid md:grid-cols-12 gap-8 items-start fade-in">
+    
+    <!-- Left side: Album Gallery (col-span-7) -->
+    <div class="md:col-span-7 flex flex-col gap-4">
+      <!-- Main Image View -->
+      <div class="bg-luxuryCharcoal rounded-2xl overflow-hidden aspect-[4/3] shadow-lg border border-luxurySoftGray relative group">
+        <img id="galleryMainImg" class="w-full h-full object-contain bg-luxuryCharcoal transition duration-300" src="" alt="Main Image">
+        
+        <!-- Image Index Tag -->
+        <div class="absolute bottom-4 right-4 px-3 py-1 bg-black/60 backdrop-blur text-white text-xs font-semibold rounded-full select-none" id="galleryIndexTag">
+          1/1
         </div>
 
-        <!-- Image Title Overlay underneath main image -->
-        <div id="galleryImgTitle" class="text-sm font-semibold text-luxuryEmeraldLight italic px-1 min-h-[20px]"></div>
-
-        <!-- Public View Count Block -->
-        <div class="flex items-center gap-2 px-3.5 py-2 bg-luxuryGold/15 text-luxuryEmerald border border-luxuryGold/20 rounded-xl w-fit font-bold text-xs sm:text-sm select-none">
-          <span class="text-base">👁️</span> <span id="detailViewCount">0</span> lượt xem
-        </div>
-
-        <!-- Thumbnail strip -->
-        <div id="galleryThumbnails" class="flex gap-2 overflow-x-auto py-1">
-          <!-- Thumbnail buttons generated by JS -->
-        </div>
-      </div>
-
-      <!-- Right side: Recipe and Info (col-span-5) -->
-      <div class="md:col-span-5 flex flex-col gap-5">
-        <div class="bg-white border border-luxurySoftGray rounded-2xl p-5 shadow-sm">
-          <div class="text-[10px] text-luxuryGold font-extrabold uppercase tracking-wider mb-1" id="detailLessonSub">
-            BÀI 1
-          </div>
-          <h2 class="serif-title text-2xl font-bold text-luxuryCharcoal leading-tight mb-2" id="detailLessonTitle">
-            Tiêu đề bài học
-          </h2>
-          <p class="text-xs sm:text-sm text-luxuryCharcoal/60 leading-relaxed" id="detailLessonDesc">
-            Mô tả ngắn của bài học ảnh.
-          </p>
-        </div>
-
-        <!-- Recipe Content Box -->
-        <div class="bg-white border border-luxurySoftGray rounded-2xl p-5 shadow-sm">
-          <div class="flex items-center justify-between border-b border-luxurySoftGray pb-3 mb-4">
-            <span class="font-bold text-luxuryEmerald text-sm flex items-center gap-2 select-none">
-              <span>📄</span> CÔNG THỨC CHI TIẾT
-            </span>
-          </div>
-          <div id="recipeContent" class="recipe-render text-sm overflow-hidden transition-all duration-300 max-h-[350px] relative">
-            <!-- Loaded by JS -->
-          </div>
-          <button id="recipeMoreBtn" class="mt-4 w-full py-2.5 bg-luxuryCream hover:bg-luxurySoftGray text-luxuryEmerald font-semibold text-xs rounded-xl transition duration-150 flex items-center justify-center gap-1.5" onclick="toggleRecipeMore()">
-            Xem thêm <span>▼</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Navigation Bar at Bottom -->
-    <div class="bg-white border-t border-luxurySoftGray py-4 px-4 sticky bottom-0 z-30 flex justify-between gap-4 mt-auto">
-      <div class="max-w-4xl mx-auto w-full flex items-center justify-between gap-4">
-        <button class="flex-1 max-w-[200px] py-3 border border-luxuryEmerald/30 hover:bg-luxurySoftGray text-luxuryEmerald font-semibold text-xs sm:text-sm rounded-xl transition" onclick="openPrevLesson()">
-          ← Bài Trước
+        <!-- Navigation Arrow Overlays -->
+        <button id="prevBtn" class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center text-lg opacity-0 group-hover:opacity-100 transition duration-200" onclick="prevGalleryImage()">
+          ‹
         </button>
-        <button class="flex-1 max-w-[200px] py-3 bg-luxuryEmerald hover:bg-luxuryEmeraldLight text-white font-semibold text-xs sm:text-sm rounded-xl shadow-md transition" onclick="openNextLesson()">
-          Bài Tiếp Theo →
+        <button id="nextBtn" class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center text-lg opacity-0 group-hover:opacity-100 transition duration-200" onclick="nextGalleryImage()">
+          ›
         </button>
       </div>
+
+      <!-- Image Title -->
+      <div id="galleryImgTitle" class="text-sm font-semibold text-luxuryEmeraldLight italic px-1 min-h-[20px]"></div>
+
+      <!-- Public View Count Block -->
+      <div class="flex items-center gap-2 px-4 py-2.5 bg-luxuryGold/15 text-luxuryEmerald border border-luxuryGold/20 rounded-xl w-fit font-extrabold text-sm select-none shadow-sm">
+        <span class="text-base">👁️</span> <span id="detailViewCount">0</span> lượt xem ảnh
+      </div>
+
+      <!-- Thumbnail strip -->
+      <div id="galleryThumbnails" class="flex gap-2 overflow-x-auto py-1">
+        <!-- Thumbnail buttons generated by JS -->
+      </div>
     </div>
-  </section>
+
+    <!-- Right side: Recipe and Info (col-span-5) -->
+    <div class="md:col-span-5 flex flex-col gap-6">
+      <!-- Info Header -->
+      <div class="bg-white border border-luxurySoftGray rounded-2xl p-6 shadow-sm">
+        <div class="text-[10px] text-luxuryGold font-extrabold uppercase tracking-wider mb-1" id="detailLessonSub">
+          Bài học
+        </div>
+        <h2 class="serif-title text-2xl sm:text-3xl font-bold text-luxuryCharcoal leading-tight mb-2" id="detailLessonTitle">
+          Tiêu đề bài học
+        </h2>
+        <p class="text-xs sm:text-sm text-luxuryCharcoal/60 leading-relaxed" id="detailLessonDesc">
+          Mô tả ngắn.
+        </p>
+      </div>
+
+      <!-- Recipe Content Box -->
+      <div class="bg-white border border-luxurySoftGray rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center justify-between border-b border-luxurySoftGray pb-3 mb-4">
+          <span class="font-bold text-luxuryEmerald text-sm flex items-center gap-2 select-none">
+            <span>📄</span> CÔNG THỨC CHI TIẾT
+          </span>
+        </div>
+        <div id="recipeContent" class="recipe-render text-sm select-text">
+          <!-- Loaded by JS -->
+        </div>
+      </div>
+    </div>
+  </main>
 
   <!-- Footer -->
   <footer class="bg-white border-t border-luxurySoftGray py-6 mt-auto text-center text-[10px] sm:text-xs text-luxuryCharcoal/40 font-medium">
-    <div class="max-w-6xl mx-auto px-4">
-      <p>© 2026 Culinary Academy. Bảo lưu mọi quyền. Học qua hình ảnh cao cấp.</p>
+    <div class="max-w-5xl mx-auto px-4">
+      <p>© 2026 Culinary Academy. Học qua hình ảnh chất lượng cao.</p>
     </div>
   </footer>
 
   <!-- SCRIPT LOGIC -->
   <script>
-    const COURSE = new URLSearchParams(window.location.search).get("course") || "banh-mi";
-    const SESSION_KEY = `course_session_token_${COURSE}`;
-    const SESSION_EMAIL_KEY = `course_session_email_${COURSE}`;
-    const SESSION_EXP_KEY = `course_session_exp_${COURSE}`;
-    const SESSION_COOKIE = "course_session_token";
+    // URL parameters parsing
+    const params = new URLSearchParams(window.location.search);
+    const COURSE = params.get("course") || "banh-mi";
+    const LESSON = params.get("lesson") || "1";
     const HERO_PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 600'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FAF9F6'/%3E%3Cstop offset='1' stop-color='%23EFECE6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='800' height='600' fill='url(%23bg)'/%3E%3Ccircle cx='650' cy='120' r='150' fill='%230F4C3A' opacity='.06'/%3E%3Ccircle cx='140' cy='500' r='190' fill='%23C5A880' opacity='.08'/%3E%3Cpath d='M160 385h480' stroke='%230F4C3A' stroke-width='10' stroke-linecap='round' opacity='.15'/%3E%3C/svg%3E";
 
-    let currentLessons = [];
-    let currentView = "home";
-    let currentLessonIndex = 0;
-
-    // Detailed Gallery Slideshow State
+    // Gallery Slideshow State
     let galleryImages = []; // Array of { title, url }
     let currentImgIdx = 0;
 
-    // ── Utility Helpers ─────────────────────────────────────────────────────────
+    // ── Helper functions ───────────────────────────────────────────────────
 
     function extractIframeSrc(input) {
       const text = String(input || "").trim();
@@ -353,14 +282,14 @@
 
     function extractLessonImages(lesson) {
       const images = [];
-      // 1. Add main thumbnail if exists
+      // 1. Main image
       if (lesson.thumbnailUrl) {
         images.push({
-          title: "Ảnh hướng dẫn chính",
+          title: "Ảnh chính bài học",
           url: convertDriveLinkToDirect(lesson.thumbnailUrl)
         });
       }
-      // 2. Add any secondary image from mediaUrls
+      // 2. Secondary images
       const parsedMedia = parseMediaUrls(lesson.mediaUrls);
       parsedMedia.forEach(m => {
         if (m.type === "image") {
@@ -370,162 +299,17 @@
           });
         }
       });
-      // Fallback if zero images
+      // Fallback
       if (images.length === 0) {
         images.push({
-          title: "Chưa có hình ảnh",
+          title: "Chưa cập nhật hình ảnh",
           url: HERO_PLACEHOLDER_IMAGE
         });
       }
       return images;
     }
 
-    function setHeroImageSource(src) {
-      const heroImage = document.getElementById("heroImage");
-      if (!heroImage) return;
-
-      heroImage.classList.add("opacity-0");
-      heroImage.onload = () => heroImage.classList.remove("opacity-0");
-      heroImage.onerror = () => {
-        if (heroImage.src !== HERO_PLACEHOLDER_IMAGE) {
-          heroImage.src = HERO_PLACEHOLDER_IMAGE;
-        }
-      };
-      heroImage.src = src || HERO_PLACEHOLDER_IMAGE;
-    }
-
-    // ── Session Cookie/Storage Utilities ─────────────────────────────────────
-
-    function setSessionCookie(token, expiresAt) {
-      if (!token) return;
-      let cookie = `${SESSION_COOKIE}=${encodeURIComponent(token)}; path=/; samesite=lax`;
-      if (expiresAt) cookie += `; expires=${new Date(Number(expiresAt)).toUTCString()}`;
-      if (location.protocol === "https:") cookie += "; secure";
-      document.cookie = cookie;
-    }
-
-    function clearSessionCookie() {
-      document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; samesite=lax`;
-    }
-
-    function getSessionCookie() {
-      const cookies = document.cookie ? document.cookie.split(";") : [];
-      for (const cookie of cookies) {
-        const index = cookie.indexOf("=");
-        if (index === -1) continue;
-        const key = cookie.slice(0, index).trim();
-        const value = cookie.slice(index + 1).trim();
-        if (key === SESSION_COOKIE) return decodeURIComponent(value);
-      }
-      return null;
-    }
-
-    function clearSession() {
-      try {
-        localStorage.removeItem(SESSION_KEY);
-        localStorage.removeItem(SESSION_EMAIL_KEY);
-        localStorage.removeItem(SESSION_EXP_KEY);
-      } catch (err) {
-        console.warn("Lỗi xoá session:", err);
-      }
-      clearSessionCookie();
-    }
-
-    function saveSession(data) {
-      try {
-        if (data && data.sessionToken) localStorage.setItem(SESSION_KEY, data.sessionToken);
-        if (data && data.email) localStorage.setItem(SESSION_EMAIL_KEY, data.email);
-        if (data && data.sessionExpiresAt) localStorage.setItem(SESSION_EXP_KEY, String(data.sessionExpiresAt));
-      } catch (err) {
-        console.warn("Lỗi lưu session:", err);
-      }
-      if (data && data.sessionToken) setSessionCookie(data.sessionToken, data.sessionExpiresAt);
-    }
-
-    function getSavedSession() {
-      let token = null;
-      let exp = 0;
-      try {
-        token = localStorage.getItem(SESSION_KEY);
-        exp = Number(localStorage.getItem(SESSION_EXP_KEY) || 0);
-      } catch (err) {
-        return getSessionCookie();
-      }
-      if (!token) return getSessionCookie();
-      if (exp && Date.now() > exp) {
-        clearSession();
-        return null;
-      }
-      return token;
-    }
-
-    function getSavedEmail() {
-      try {
-        return localStorage.getItem(SESSION_EMAIL_KEY) || "Học viên";
-      } catch(e) {
-        return "Học viên";
-      }
-    }
-
-    function scrollToLessons() {
-      document.getElementById("lessonsSection").scrollIntoView({ behavior: "smooth" });
-    }
-
-    // ── Logged in/out States ──────────────────────────────────────────────────
-
-    function showLoggedInState(email) {
-      const safeEmail = email || "";
-      const truncatedEmail = safeEmail.length > 20 ? safeEmail.substring(0, 18) + "..." : safeEmail;
-
-      const headerArea = document.getElementById("loginArea");
-      headerArea.innerHTML = `
-        <div class="flex items-center gap-3">
-          <div class="hidden sm:flex flex-col text-right">
-            <span class="text-[10px] font-bold text-luxuryGold">ĐÃ ĐĂNG NHẬP</span>
-            <span class="text-xs text-luxuryCharcoal/60 font-semibold" title="${safeEmail}">${truncatedEmail}</span>
-          </div>
-          <div class="w-8 h-8 rounded-full bg-luxuryEmerald text-white flex items-center justify-center font-bold text-xs shadow" title="${safeEmail}">
-            ${safeEmail.charAt(0).toUpperCase()}
-          </div>
-          <button onclick="logoutGoogle()" class="px-3 py-1.5 bg-luxuryGold/10 hover:bg-luxuryGold/20 text-luxuryEmerald font-semibold text-xs rounded-lg transition">
-            Thoát
-          </button>
-        </div>
-      `;
-
-      const detailAuth = document.getElementById("detailLessonAuthIndicator");
-      if (detailAuth) {
-        detailAuth.innerText = truncatedEmail;
-        detailAuth.title = safeEmail;
-      }
-    }
-
-    function showLoggedOutState() {
-      const headerArea = document.getElementById("loginArea");
-      headerArea.innerHTML = `<div id="googleBtn" class="min-h-[38px] flex items-center justify-end"></div>`;
-      renderGoogleButton();
-
-      const detailAuth = document.getElementById("detailLessonAuthIndicator");
-      if (detailAuth) {
-        detailAuth.innerText = "Chưa đăng nhập";
-      }
-    }
-
-    function renderGoogleButton() {
-      const btnContainer = document.getElementById("googleBtn");
-      if (!btnContainer) return;
-      if (typeof google !== "undefined" && google.accounts && google.accounts.id) {
-        btnContainer.innerHTML = "";
-        google.accounts.id.renderButton(btnContainer, {
-          theme: "outline",
-          size: "medium",
-          text: "signin_with",
-          shape: "pill"
-        });
-      }
-    }
-
-    // ── HTML Formatting Helpers ──────────────────────────────────────────────
+    // ── HTML formatting ──────────────────────────────────────────────────────
 
     function escapeHtml(text) {
       return String(text || "")
@@ -607,135 +391,21 @@
         return `<div class="recipe-content-html">${recipeTextToHtml(lesson.recipeText)}</div>`;
       }
       return `
-        <div class="text-luxuryGold bg-luxuryGold/5 p-4 rounded-xl text-center text-xs font-semibold leading-relaxed border border-luxuryGold/10 select-none">
-          Chưa có nội dung công thức hoặc tài liệu công thức đang được đồng bộ.
+        <div class="text-luxuryGold bg-luxuryGold/5 p-4 rounded-xl text-center text-xs font-semibold leading-relaxed border border-luxuryGold/10">
+          Chưa có tài liệu công thức chi tiết.
         </div>
       `;
     }
 
-    // ── View Actions ─────────────────────────────────────────────────────────
-
-    function renderLessons(lessons) {
-      const list = document.getElementById("lessonList");
-      if (!list) return;
-      list.innerHTML = "";
-
-      const total = lessons.length;
-      if (total === 0) {
-        list.innerHTML = `<p class="col-span-full text-center font-bold text-luxuryEmeraldLight py-8 select-none">Không tìm thấy bài học nào.</p>`;
-        return;
-      }
-
-      lessons.forEach((l, idx) => {
-        const item = document.createElement("div");
-        item.className = "bg-white border border-luxurySoftGray rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-200 flex flex-col fade-in";
-
-        const thumb = l.thumbnailUrl ? convertDriveLinkToDirect(l.thumbnailUrl) : HERO_PLACEHOLDER_IMAGE;
-        const views = parseInt(l.views, 10) || 0;
-
-        item.innerHTML = `
-          <!-- Thumbnail -->
-          <div class="relative aspect-[4/3] cursor-pointer bg-luxurySoftGray overflow-hidden border-b border-luxurySoftGray group" onclick="openLessonDetail(${idx})">
-            <img class="w-full h-full object-cover transition duration-300 group-hover:scale-105" src="${thumb}" alt="Thumbnail">
-            <div class="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition duration-200"></div>
-            <span class="absolute bottom-3 left-3 px-2 py-0.5 rounded bg-luxuryEmerald text-white font-semibold text-[10px] uppercase tracking-wide">
-              Bài ${l.lesson || idx + 1}
-            </span>
-          </div>
-
-          <!-- Body -->
-          <div class="p-4 flex-grow flex flex-col justify-between">
-            <div>
-              <h3 class="font-bold text-base text-luxuryCharcoal hover:text-luxuryEmerald cursor-pointer truncate mb-1" onclick="openLessonDetail(${idx})">
-                ${l.title || "Bài học mới"}
-              </h3>
-              <p class="text-xs text-luxuryCharcoal/60 line-clamp-2 leading-relaxed mb-3">
-                ${l.description || "Tóm tắt nội dung bài học bằng hình ảnh..."}
-              </p>
-            </div>
-
-            <div class="pt-3 border-t border-luxurySoftGray flex items-center justify-between">
-              <!-- Public View Count under the thumbnail/title -->
-              <div class="flex items-center gap-1.5 text-xs text-luxuryEmeraldLight font-semibold select-none">
-                <span>👁️</span>
-                <span>${views.toLocaleString('vi-VN')} lượt xem</span>
-              </div>
-              <button class="px-3.5 py-1.5 bg-luxuryEmerald hover:bg-luxuryEmeraldLight text-white font-semibold text-xs rounded-lg transition" onclick="openLessonDetail(${idx})">
-                Xem ảnh →
-              </button>
-            </div>
-          </div>
-        `;
-
-        list.appendChild(item);
-      });
-
-      document.getElementById("lessonCount").innerText = `${total} bài học ảnh độc quyền đã sẵn sàng`;
-      document.getElementById("statusBox").classList.add("hidden");
-      list.classList.remove("hidden");
-    }
-
-    async function incrementViewCount(course, lesson) {
-      try {
-        const response = await fetch("/api/increment-view", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ course, lesson })
-        });
-        const data = await response.json();
-        if (data.success) {
-          return data.views;
-        }
-      } catch (err) {
-        console.error("Lỗi tăng view count:", err);
-      }
-      return null;
-    }
-
-    async function openLessonDetail(index) {
-      currentView = "detail";
-      currentLessonIndex = Math.max(0, Math.min(index, currentLessons.length - 1));
-      const l = currentLessons[currentLessonIndex] || {};
-
-      document.getElementById("detailLessonHeaderTitle").innerText = l.title || "Chi Tiết Bài Học";
-      document.getElementById("detailLessonSub").innerText = `BÀI ${l.lesson || currentLessonIndex + 1}`;
-      document.getElementById("detailLessonTitle").innerText = l.title || "Bài Học";
-      document.getElementById("detailLessonDesc").innerText = l.description || "";
-
-      // Setup recipe
-      const recipe = document.getElementById("recipeContent");
-      recipe.innerHTML = renderRecipeContent(l);
-      recipe.classList.add("max-h-[350px]");
-      document.getElementById("recipeMoreBtn").innerHTML = `Xem thêm <span>▼</span>`;
-
-      // Extract album images
-      galleryImages = extractLessonImages(l);
-      currentImgIdx = 0;
-      renderGallery();
-
-      // Show temporary local views
-      const initialViews = parseInt(l.views, 10) || 0;
-      document.getElementById("detailViewCount").innerText = initialViews.toLocaleString('vi-VN');
-
-      // Show detail view container
-      document.getElementById("homeView").classList.add("hidden");
-      document.getElementById("detailLessonPage").classList.remove("hidden");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-
-      // Call API to increment view and update in real-time
-      const updatedViews = await incrementViewCount(COURSE, l.lesson);
-      if (updatedViews !== null) {
-        // Update local array
-        l.views = updatedViews;
-        document.getElementById("detailViewCount").innerText = updatedViews.toLocaleString('vi-VN');
-      }
-    }
+    // ── Gallery render ────────────────────────────────────────────────────────
 
     function renderGallery() {
       const imgEl = document.getElementById("galleryMainImg");
       const tagEl = document.getElementById("galleryIndexTag");
       const titleEl = document.getElementById("galleryImgTitle");
       const thumbsEl = document.getElementById("galleryThumbnails");
+      const prevBtn = document.getElementById("prevBtn");
+      const nextBtn = document.getElementById("nextBtn");
 
       if (galleryImages.length === 0) return;
 
@@ -744,15 +414,26 @@
       tagEl.innerText = `${currentImgIdx + 1}/${galleryImages.length}`;
       titleEl.innerText = current.title || "";
 
-      // Render thumbnails
-      thumbsEl.innerHTML = "";
-      galleryImages.forEach((img, idx) => {
-        const btn = document.createElement("button");
-        btn.className = `w-14 h-11 rounded-lg overflow-hidden border-2 flex-shrink-0 transition duration-150 ${idx === currentImgIdx ? 'border-luxuryEmerald scale-95 shadow-sm' : 'border-transparent opacity-60 hover:opacity-100'}`;
-        btn.onclick = () => selectGalleryImage(idx);
-        btn.innerHTML = `<img class="w-full h-full object-cover" src="${img.url}" alt="Thumbnail">`;
-        thumbsEl.appendChild(btn);
-      });
+      // Hide arrows if only one image exists
+      if (galleryImages.length <= 1) {
+        prevBtn.classList.add("hidden");
+        nextBtn.classList.add("hidden");
+        thumbsEl.classList.add("hidden");
+      } else {
+        prevBtn.classList.remove("hidden");
+        nextBtn.classList.remove("hidden");
+        thumbsEl.classList.remove("hidden");
+
+        // Render thumbnails
+        thumbsEl.innerHTML = "";
+        galleryImages.forEach((img, idx) => {
+          const btn = document.createElement("button");
+          btn.className = `w-14 h-11 rounded-lg overflow-hidden border-2 flex-shrink-0 transition duration-150 ${idx === currentImgIdx ? 'border-luxuryEmerald scale-95 shadow-sm' : 'border-transparent opacity-60 hover:opacity-100'}`;
+          btn.onclick = () => selectGalleryImage(idx);
+          btn.innerHTML = `<img class="w-full h-full object-cover" src="${img.url}" alt="Thumbnail">`;
+          thumbsEl.appendChild(btn);
+        });
+      }
     }
 
     function selectGalleryImage(idx) {
@@ -770,202 +451,60 @@
       renderGallery();
     }
 
-    function goHomeView() {
-      currentView = "home";
-      document.getElementById("detailLessonPage").classList.add("hidden");
-      document.getElementById("homeView").classList.remove("hidden");
-      if (currentLessons.length > 0) {
-        renderLessons(currentLessons);
-      }
-    }
+    // ── Load Lesson Data ─────────────────────────────────────────────────────
 
-    function toggleRecipeMore() {
-      const recipe = document.getElementById("recipeContent");
-      const btn = document.getElementById("recipeMoreBtn");
-      
-      if (recipe.classList.contains("max-h-[350px]")) {
-        recipe.classList.remove("max-h-[350px]");
-        recipe.classList.add("max-h-[5000px]");
-        btn.innerHTML = `Thu gọn <span>▲</span>`;
-      } else {
-        recipe.classList.remove("max-h-[5000px]");
-        recipe.classList.add("max-h-[350px]");
-        btn.innerHTML = `Xem thêm <span>▼</span>`;
-      }
-    }
-
-    function openPrevLesson() {
-      if (currentLessonIndex > 0) {
-        openLessonDetail(currentLessonIndex - 1);
-      } else {
-        alert("Đây là bài học đầu tiên.");
-      }
-    }
-
-    function openNextLesson() {
-      if (currentLessonIndex < currentLessons.length - 1) {
-        openLessonDetail(currentLessonIndex + 1);
-      } else {
-        alert("Đây là bài học cuối cùng.");
-      }
-    }
-
-    // ── API Communication ───────────────────────────────────────────────────
-
-    async function loadCourseData(authPayload) {
-      const statusBox = document.getElementById("statusBox");
-      if (!statusBox) return;
-
-      statusBox.classList.remove("hidden");
-      statusBox.innerHTML = `
-        <div class="flex items-center justify-center gap-3 py-6 select-none">
-          <div class="w-5 h-5 border-4 border-luxuryEmerald border-t-transparent rounded-full animate-spin"></div>
-          <span class="font-bold text-luxuryCharcoal text-sm">Đang xác minh tài khoản...</span>
-        </div>
-      `;
+    async function loadLessonData() {
+      const loadingView = document.getElementById("loadingView");
+      const errorView = document.getElementById("errorView");
+      const lessonView = document.getElementById("lessonView");
 
       try {
-        const payload = { course: COURSE, ...authPayload };
-        const response = await fetch("/api/course-data", {
+        const response = await fetch("/api/public-lesson", {
           method: "POST",
-          credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ course: COURSE, lesson: LESSON })
         });
 
         const data = await response.json();
-        
-        if (!response.ok || !data.allowed) {
-          if (response.status === 401 || response.status === 403) {
-            clearSession();
-            statusBox.innerHTML = `
-              <div class="text-3xl mb-3">⚠️</div>
-              <p class="font-bold text-base text-luxuryGold mb-1">Không có quyền truy cập</p>
-              <p class="text-luxuryCharcoal/60 text-xs max-w-xs mx-auto leading-relaxed">
-                Tài khoản Gmail <b>${escapeHtml(data.email || "của bạn")}</b> chưa đăng ký học. Vui lòng đăng nhập đúng tài khoản hoặc liên hệ quản trị viên.
-              </p>
-            `;
-            showLoggedOutState();
-            return;
-          }
-          statusBox.innerHTML = `
-            <div class="text-3xl mb-3">📡</div>
-            <p class="font-bold text-base text-luxuryCharcoal mb-1">Lỗi kết nối</p>
-            <p class="text-luxuryCharcoal/60 text-xs">Máy chủ đang bận. Vui lòng thử lại sau ít phút.</p>
-          `;
+
+        if (!response.ok || !data.success || !data.lesson) {
+          loadingView.classList.add("hidden");
+          document.getElementById("errorMsg").innerText = data.error || "Không tìm thấy nội dung bài học.";
+          errorView.classList.remove("hidden");
           return;
         }
 
-        saveSession(data);
-        showLoggedInState(data.email);
+        const l = data.lesson;
 
-        if (data.courseInfo) {
-          if (data.courseInfo.title) {
-            document.getElementById("courseTitle").innerHTML = data.courseInfo.title;
-          }
-          if (data.courseInfo.subtitle) {
-            document.getElementById("courseSubtitle").innerText = data.courseInfo.subtitle;
-          }
-          setHeroImageSource(data.courseInfo.heroImage || HERO_PLACEHOLDER_IMAGE);
-        } else {
-          setHeroImageSource(HERO_PLACEHOLDER_IMAGE);
-        }
+        // Render header title & course badge
+        document.getElementById("courseBadge").innerText = COURSE.toUpperCase();
+        document.getElementById("detailLessonHeaderTitle").innerText = l.title || "Hình Ảnh Bài Học";
+        document.getElementById("detailLessonSub").innerText = `BÀI HỌC SỐ ${l.lesson || LESSON}`;
+        document.getElementById("detailLessonTitle").innerText = l.title || "Bài Học";
+        document.getElementById("detailLessonDesc").innerText = l.description || "";
 
-        currentLessons = data.lessons || [];
-        renderLessons(currentLessons);
+        // Load recipe
+        document.getElementById("recipeContent").innerHTML = renderRecipeContent(l);
 
-        // Auto open lesson detail if specified in URL query
-        const startLesson = new URLSearchParams(window.location.search).get("lesson");
-        if (startLesson !== null) {
-          const lIdx = parseInt(startLesson, 10);
-          if (!isNaN(lIdx) && lIdx >= 0 && lIdx < currentLessons.length) {
-            setTimeout(() => {
-              openLessonDetail(lIdx);
-            }, 100);
-          }
-        }
+        // Load views
+        const views = parseInt(l.views, 10) || 0;
+        document.getElementById("detailViewCount").innerText = views.toLocaleString('vi-VN');
+
+        // Extract gallery images
+        galleryImages = extractLessonImages(l);
+        currentImgIdx = 0;
+        renderGallery();
+
+        // Switch container view
+        loadingView.classList.add("hidden");
+        lessonView.classList.remove("hidden");
 
       } catch (err) {
-        console.error("Lỗi load course data:", err);
-        statusBox.innerHTML = `
-          <div class="text-3xl mb-3">🚨</div>
-          <p class="font-bold text-base text-luxuryGold mb-1">Lỗi kết nối</p>
-          <p class="text-luxuryCharcoal/60 text-xs">Không kết nối được hệ thống học tập. Vui lòng thử lại.</p>
-        `;
+        console.error("Lỗi khi tải bài học:", err);
+        loadingView.classList.add("hidden");
+        document.getElementById("errorMsg").innerText = "Lỗi mạng hoặc máy chủ không thể phản hồi. Vui lòng tải lại trang.";
+        errorView.classList.remove("hidden");
       }
-    }
-
-    async function waitForGoogleLibrary() {
-      if (typeof google !== "undefined" && google.accounts && google.accounts.id) return;
-      await new Promise((resolve, reject) => {
-        let count = 0;
-        const interval = setInterval(() => {
-          count++;
-          if (typeof google !== "undefined" && google.accounts && google.accounts.id) {
-            clearInterval(interval);
-            resolve();
-          }
-          if (count > 80) {
-            clearInterval(interval);
-            reject(new Error("Lỗi tải thư viện đăng nhập của Google"));
-          }
-        }, 100);
-      });
-    }
-
-    async function getPublicConfig() {
-      try {
-        const res = await fetch("/api/public-config");
-        if (!res.ok) return { googleClientId: "" };
-        return await res.json();
-      } catch (err) {
-        return { googleClientId: "" };
-      }
-    }
-
-    async function setupGoogleSignIn(config) {
-      if (!config.googleClientId) return false;
-      try {
-        await waitForGoogleLibrary();
-        google.accounts.id.initialize({
-          client_id: config.googleClientId,
-          callback: (response) => loadCourseData({ credential: response.credential })
-        });
-        return true;
-      } catch (err) {
-        return false;
-      }
-    }
-
-    async function tryRestoreSession() {
-      const savedToken = getSavedSession();
-      if (savedToken) {
-        await loadCourseData({ sessionToken: savedToken });
-        return true;
-      }
-      return false;
-    }
-
-    async function initGoogle() {
-      const configPromise = getPublicConfig();
-      if (await tryRestoreSession()) return;
-      
-      const config = await configPromise;
-      const googleReady = await setupGoogleSignIn(config);
-      
-      showLoggedOutState();
-      if (!googleReady) {
-        document.getElementById("statusBox").innerHTML = `
-          <div class="text-3xl mb-3">⚙️</div>
-          <p class="font-bold text-base text-luxuryGold mb-1">Chưa cấu hình Google Client ID</p>
-          <p class="text-luxuryCharcoal/60 text-xs">Thiếu cấu hình biến môi trường GOOGLE_CLIENT_ID trên server.</p>
-        `;
-      }
-    }
-
-    function logoutGoogle() {
-      clearSession();
-      location.reload();
     }
 
     window.onload = () => {
@@ -976,7 +515,7 @@
         }
       });
 
-      // Swipe support for mobile detail gallery view
+      // Swipe support for mobile gallery
       let touchStartX = 0;
       let touchEndX = 0;
       const mainImgContainer = document.getElementById("galleryMainImg");
@@ -995,15 +534,9 @@
         }, { passive: true });
       }
 
-      // Initialize Google login flow
-      initGoogle();
+      // Initial loading
+      loadLessonData();
     };
-
-    window.addEventListener("resize", () => {
-      if (currentLessons.length > 0 && currentView === "home") {
-        renderLessons(currentLessons);
-      }
-    });
   </script>
 </body>
 </html>
